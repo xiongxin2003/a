@@ -11,15 +11,22 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #f5f5f7;
             color: #1c1c1e;
-            height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            position: relative;
         }
+
+        /* ===== 顶栏 ===== */
         .navbar {
             background: #ffffff;
             padding: 12px 16px;
@@ -31,11 +38,13 @@
             flex-wrap: wrap;
             gap: 6px;
             min-height: 52px;
-            z-index: 10;
+            z-index: 20;
+            position: relative;
         }
         .navbar-title {
             font-size: 20px;
             font-weight: 700;
+            white-space: nowrap;
         }
         .navbar-actions {
             display: flex;
@@ -51,17 +60,12 @@
             font-weight: 500;
             cursor: pointer;
             border-radius: 6px;
-            -webkit-touch-callout: none;
         }
         .navbar-btn:active {
             background: #e8e8ed;
         }
-        .navbar-btn.export-btn {
-            color: #34c759;
-        }
-        .navbar-btn.import-btn {
-            color: #ff9500;
-        }
+        .navbar-btn.export-btn { color: #34c759; }
+        .navbar-btn.import-btn { color: #ff9500; }
         .navbar-back {
             font-size: 16px;
             color: #007aff;
@@ -72,9 +76,7 @@
             cursor: pointer;
             display: none;
         }
-        .navbar-back.show {
-            display: block;
-        }
+        .navbar-back.show { display: block; }
         .navbar-right {
             display: flex;
             gap: 6px;
@@ -89,19 +91,33 @@
             font-weight: 500;
             cursor: pointer;
         }
-        .navbar-btn-danger:active {
-            opacity: 0.6;
-        }
-        .main-content {
+
+        /* ===== 滚动容器（核心修复） ===== */
+        .scroll-container {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 16px 12px;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 16px 16px 20px;
+            /* 底部留白，让滚动有弹性空间 */
+            min-height: 0;
         }
+
+        /* 内容底部额外留白，保证弹性滑动 */
+        .scroll-container::after {
+            content: '';
+            display: block;
+            height: 40px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        /* ===== 分类列表 ===== */
         .category-list {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            padding-bottom: 8px;
         }
         .category-item {
             background: #ffffff;
@@ -115,14 +131,14 @@
             transition: background 0.15s;
             -webkit-user-select: none;
             user-select: none;
+            flex-shrink: 0;
         }
-        .category-item:active {
-            background: #e8e8ed;
-        }
+        .category-item:active { background: #e8e8ed; }
         .category-name {
             font-size: 17px;
             font-weight: 500;
             word-break: break-word;
+            padding-right: 8px;
         }
         .category-meta {
             display: flex;
@@ -136,6 +152,7 @@
             background: #f2f2f7;
             padding: 2px 10px;
             border-radius: 30px;
+            white-space: nowrap;
         }
         .category-del {
             color: #ff3b30;
@@ -146,13 +163,14 @@
             cursor: pointer;
             opacity: 0.4;
         }
-        .category-del:active {
-            opacity: 1;
-        }
+        .category-del:active { opacity: 1; }
+
+        /* ===== 记录列表 ===== */
         .record-list {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            padding-bottom: 8px;
         }
         .record-item {
             background: #ffffff;
@@ -164,6 +182,7 @@
             word-break: break-word;
             line-height: 1.6;
             font-size: 15px;
+            flex-shrink: 0;
         }
         .record-time {
             display: block;
@@ -184,9 +203,9 @@
             cursor: pointer;
             padding: 4px;
         }
-        .record-del:active {
-            opacity: 1;
-        }
+        .record-del:active { opacity: 1; }
+
+        /* ===== 空状态 ===== */
         .empty-state {
             text-align: center;
             color: #8e8e93;
@@ -199,6 +218,8 @@
             display: block;
             margin-bottom: 12px;
         }
+
+        /* ===== 底部输入栏 ===== */
         .bottom-bar {
             background: #ffffff;
             padding: 10px 16px 14px;
@@ -207,6 +228,8 @@
             display: flex;
             gap: 10px;
             align-items: flex-end;
+            z-index: 10;
+            position: relative;
         }
         .bottom-bar input,
         .bottom-bar textarea {
@@ -243,32 +266,45 @@
             height: 42px;
             min-width: 60px;
         }
-        .bottom-bar .btn:active {
-            opacity: 0.7;
-        }
+        .bottom-bar .btn:active { opacity: 0.7; }
         .bottom-bar .btn-secondary {
             background: #f2f2f7;
             color: #007aff;
         }
-        .bottom-bar .btn-secondary:active {
-            background: #e5e5ea;
-        }
+        .bottom-bar .btn-secondary:active { background: #e5e5ea; }
         .bottom-bar .input-row {
             display: flex;
             gap: 10px;
             width: 100%;
         }
+        /* 创建分类的输入栏（在底部） */
+        #home-input {
+            display: none;
+        }
+        #home-input.show {
+            display: flex;
+        }
+
+        /* ===== 页面容器 ===== */
         .page {
             display: none;
             flex-direction: column;
             height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #f5f5f7;
         }
         .page.active {
             display: flex;
         }
+
+        /* ===== Toast ===== */
         .toast {
             position: fixed;
-            bottom: 90px;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.78);
@@ -283,14 +319,9 @@
             white-space: nowrap;
             max-width: 90%;
         }
-        .toast.show {
-            opacity: 1;
-        }
-        #fileInput {
-            display: none;
-        }
+        .toast.show { opacity: 1; }
 
-        /* ===== 导出选择弹窗 ===== */
+        /* ===== 导出弹窗 ===== */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -305,9 +336,7 @@
             -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
         }
-        .modal-overlay.show {
-            display: flex;
-        }
+        .modal-overlay.show { display: flex; }
         .modal-box {
             background: #ffffff;
             border-radius: 20px;
@@ -345,25 +374,12 @@
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            transition: opacity 0.15s;
             text-align: center;
             width: 100%;
         }
-        .modal-btn:active {
-            opacity: 0.7;
-        }
-        .modal-btn-primary {
-            background: #007aff;
-            color: #ffffff;
-        }
-        .modal-btn-secondary {
-            background: #f2f2f7;
-            color: #1c1c1e;
-        }
-        .modal-btn-success {
-            background: #34c759;
-            color: #ffffff;
-        }
+        .modal-btn:active { opacity: 0.7; }
+        .modal-btn-primary { background: #007aff; color: #ffffff; }
+        .modal-btn-success { background: #34c759; color: #ffffff; }
         .modal-btn-cancel {
             background: none;
             color: #8e8e93;
@@ -377,11 +393,14 @@
             margin: 6px 0 2px;
         }
 
+        #fileInput { display: none; }
+
+        /* ===== 响应式 ===== */
         @media (max-width: 480px) {
             .navbar { padding: 10px 12px; min-height: 46px; }
             .navbar-title { font-size: 18px; }
             .navbar-btn { font-size: 12px; padding: 4px 8px; }
-            .main-content { padding: 12px 12px 8px; }
+            .scroll-container { padding: 12px 12px 16px; }
             .bottom-bar { padding: 8px 12px 12px; }
             .category-item { padding: 12px 14px; }
             .record-item { padding: 12px 14px; padding-right: 38px; }
@@ -394,7 +413,7 @@
     <div class="toast" id="toast"></div>
     <input type="file" id="fileInput" accept=".json">
 
-    <!-- ===== 导出选择弹窗 ===== -->
+    <!-- ===== 导出弹窗 ===== -->
     <div class="modal-overlay" id="exportModal">
         <div class="modal-box">
             <div class="modal-title">📤 导出数据</div>
@@ -418,8 +437,10 @@
                 <button class="navbar-btn" id="btn-new-cat">+ 新建</button>
             </div>
         </div>
-        <div class="main-content" id="home-list"></div>
-        <div class="bottom-bar" id="home-input" style="display:none;">
+        <div class="scroll-container" id="home-scroll">
+            <div id="home-list"></div>
+        </div>
+        <div class="bottom-bar" id="home-input">
             <div class="input-row">
                 <input type="text" id="cat-input" placeholder="输入分类名称..." maxlength="20">
                 <button class="btn" id="btn-save-cat">创建</button>
@@ -437,7 +458,9 @@
                 <button class="navbar-btn-danger" id="btn-del-cat">删除</button>
             </div>
         </div>
-        <div class="main-content" id="detail-list"></div>
+        <div class="scroll-container" id="detail-scroll">
+            <div id="detail-list"></div>
+        </div>
         <div class="bottom-bar">
             <textarea id="record-input" placeholder="写点什么..." rows="1"></textarea>
             <button class="btn" id="btn-add-record">添加</button>
@@ -453,7 +476,6 @@
             var data = { categories: [] };
             var currentCatId = null;
             var toastTimer = null;
-            var scrollPositions = { home: 0, detail: 0 };
 
             // ===== 存储 =====
             function loadData() {
@@ -519,6 +541,8 @@
             var detailTitle = document.getElementById('detail-title');
             var homeInput = document.getElementById('home-input');
             var catInput = document.getElementById('cat-input');
+            var homeScroll = document.getElementById('home-scroll');
+            var detailScroll = document.getElementById('detail-scroll');
 
             function findCategory(id) {
                 for (var i = 0; i < data.categories.length; i++) {
@@ -532,15 +556,20 @@
                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
-            // ===== 渲染 =====
+            // ===== 渲染（保留滚动位置） =====
             function renderHome() {
                 var cats = data.categories || [];
+                var scrollTop = homeScroll.scrollTop || 0;
                 var container = homeList;
-                scrollPositions.home = container.scrollTop || 0;
+
                 if (cats.length === 0) {
                     container.innerHTML = '<div class="empty-state"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
+                    requestAnimationFrame(function() {
+                        homeScroll.scrollTop = scrollTop;
+                    });
                     return;
                 }
+
                 var html = '<div class="category-list">';
                 for (var i = 0; i < cats.length; i++) {
                     var c = cats[i];
@@ -554,9 +583,12 @@
                 }
                 html += '</div>';
                 container.innerHTML = html;
+
+                // 恢复滚动位置
                 requestAnimationFrame(function() {
-                    container.scrollTop = scrollPositions.home;
+                    homeScroll.scrollTop = scrollTop;
                 });
+
                 container.querySelectorAll('.category-item').forEach(function(el) {
                     el.addEventListener('click', function(e) {
                         if (e.target.closest('.category-del')) return;
@@ -575,13 +607,17 @@
 
             function renderDetail(catId) {
                 var cat = findCategory(catId);
+                var scrollTop = detailScroll.scrollTop || 0;
                 var container = detailList;
-                scrollPositions.detail = container.scrollTop || 0;
+
                 if (!cat) { goHome(); return; }
                 detailTitle.textContent = cat.name;
                 var records = cat.records || [];
                 if (records.length === 0) {
                     container.innerHTML = '<div class="empty-state"><span class="icon">✍️</span>还没有记录<br>在底部输入框添加第一条</div>';
+                    requestAnimationFrame(function() {
+                        detailScroll.scrollTop = scrollTop;
+                    });
                     return;
                 }
                 var html = '<div class="record-list">';
@@ -595,9 +631,11 @@
                 }
                 html += '</div>';
                 container.innerHTML = html;
+
                 requestAnimationFrame(function() {
-                    container.scrollTop = scrollPositions.detail;
+                    detailScroll.scrollTop = scrollTop;
                 });
+
                 container.querySelectorAll('.record-del').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         if (confirm('删除这条记录？')) {
@@ -613,8 +651,7 @@
                 pageHome.classList.add('active');
                 pageDetail.classList.remove('active');
                 document.getElementById('btn-back').classList.remove('show');
-                // 关闭输入框
-                homeInput.style.display = 'none';
+                homeInput.classList.remove('show');
                 catInput.value = '';
                 renderHome();
             }
@@ -642,7 +679,7 @@
                 renderHome();
                 showToast('✅ 已创建');
                 catInput.value = '';
-                homeInput.style.display = 'none';
+                homeInput.classList.remove('show');
             }
 
             function deleteCategory(catId) {
@@ -702,7 +739,7 @@
                     try {
                         localStorage.setItem(LAST_EXPORT_KEY, filename);
                     } catch(e) {}
-                    showToast('✅ 导出成功: ' + filename);
+                    showToast('✅ 导出成功');
                 } catch(e) {
                     console.error(e);
                     showToast('❌ 导出失败');
@@ -710,8 +747,7 @@
             }
 
             function exportNew() {
-                var timeStr = getTimeStrCompact();
-                var filename = '记录本_备份_' + timeStr + '.json';
+                var filename = '记录本_备份_' + getTimeStrCompact() + '.json';
                 performExport(filename);
                 closeExportModal();
             }
@@ -785,42 +821,33 @@
                 reader.readAsText(file);
             }
 
-            // ===== 事件绑定（使用独立监听，避免冲突） =====
-
-            // 返回
+            // ===== 事件绑定 =====
             document.getElementById('btn-back').addEventListener('click', goHome);
 
-            // 新建分类 - 使用独立逻辑，阻止事件冒泡
+            // 新建分类 - 切换显示
             document.getElementById('btn-new-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
-                e.preventDefault();
-                var currentDisplay = homeInput.style.display;
-                if (currentDisplay === 'flex') {
-                    homeInput.style.display = 'none';
-                    catInput.value = '';
-                } else {
-                    homeInput.style.display = 'flex';
-                    // 延迟聚焦，确保输入框已显示
+                homeInput.classList.toggle('show');
+                if (homeInput.classList.contains('show')) {
                     setTimeout(function() {
                         catInput.focus();
-                    }, 150);
+                    }, 200);
+                } else {
+                    catInput.value = '';
                 }
             });
 
-            // 创建分类
             document.getElementById('btn-save-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
                 addCategory(catInput.value);
             });
 
-            // 取消创建
             document.getElementById('btn-cancel-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
-                homeInput.style.display = 'none';
+                homeInput.classList.remove('show');
                 catInput.value = '';
             });
 
-            // 分类输入框回车
             catInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -828,7 +855,6 @@
                 }
             });
 
-            // 删除分类
             document.getElementById('btn-del-cat').addEventListener('click', function() {
                 if (!currentCatId) return;
                 if (confirm('确定删除这个分类吗？（其中的记录也会被删除）')) {
@@ -836,7 +862,6 @@
                 }
             });
 
-            // 添加记录
             document.getElementById('btn-add-record').addEventListener('click', function() {
                 if (!currentCatId) { showToast('请先选择分类'); return; }
                 addRecord(currentCatId, document.getElementById('record-input').value);
@@ -854,13 +879,11 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // 导出
             document.getElementById('btnExport').addEventListener('click', function(e) {
                 e.preventDefault();
                 showExportModal();
             });
 
-            // 导入
             var fileInput = document.getElementById('fileInput');
             document.getElementById('btnImport').addEventListener('click', function(e) {
                 e.preventDefault();
@@ -876,16 +899,13 @@
             });
 
             // ===== 点击页面空白关闭输入框 =====
-            // 使用独立的监听，只在点击空白区域时触发
             document.addEventListener('click', function(e) {
                 var target = e.target;
-                // 如果输入框是显示状态
-                if (homeInput.style.display === 'flex') {
-                    // 判断点击是否在输入框区域内，或新建按钮上
+                if (homeInput.classList.contains('show')) {
                     var isInputArea = target.closest('#home-input');
                     var isNewBtn = target.closest('#btn-new-cat');
                     if (!isInputArea && !isNewBtn) {
-                        homeInput.style.display = 'none';
+                        homeInput.classList.remove('show');
                         catInput.value = '';
                     }
                 }
