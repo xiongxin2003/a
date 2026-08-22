@@ -41,7 +41,7 @@
             flex-wrap: wrap;
         }
         .navbar-btn {
-            font-size: 14px;
+            font-size: 13px;
             color: #007aff;
             background: none;
             border: none;
@@ -78,7 +78,7 @@
             align-items: center;
         }
         .navbar-btn-danger {
-            font-size: 14px;
+            font-size: 13px;
             color: #ff3b30;
             background: none;
             border: none;
@@ -278,18 +278,15 @@
         .toast.show {
             opacity: 1;
         }
-        /* 隐藏的文件输入 */
         #fileInput {
             display: none;
         }
         @media (max-width: 480px) {
             .navbar { padding: 10px 12px; }
             .navbar-title { font-size: 18px; }
-            .navbar-btn { font-size: 13px; padding: 4px 8px; }
+            .navbar-btn { font-size: 12px; padding: 4px 8px; }
             .main-content { padding: 12px 12px 8px; }
             .bottom-bar { padding: 8px 12px 12px; }
-            .category-item { padding: 12px 14px; }
-            .record-item { padding: 12px 14px; padding-right: 38px; }
         }
     </style>
 </head>
@@ -389,7 +386,7 @@
                 clearTimeout(toastTimer);
                 toastTimer = setTimeout(function() {
                     el.classList.remove('show');
-                }, 1800);
+                }, 2000);
             }
 
             // ===== DOM =====
@@ -555,26 +552,40 @@
                 showToast('已删除');
             }
 
-            // ===== 导入/导出 =====
+            // ===== 导入/导出（修复版） =====
             function exportData() {
                 try {
                     var jsonStr = JSON.stringify(data, null, 2);
-                    var blob = new Blob([jsonStr], { type: 'application/json' });
+                    // 兼容 iOS 的处理方式
+                    var blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
                     var url = URL.createObjectURL(blob);
+                    
+                    // 创建下载链接
                     var a = document.createElement('a');
                     a.href = url;
-                    a.download = '我的记录本_备份_' + getTimeStr().replace(/[: ]/g, '_') + '.json';
+                    a.download = '记录本备份_' + getTimeStr().replace(/[: ]/g, '_') + '.json';
                     document.body.appendChild(a);
                     a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                    
+                    // 清理
+                    setTimeout(function() {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 1000);
+                    
                     showToast('✅ 导出成功');
                 } catch(e) {
-                    showToast('❌ 导出失败');
+                    console.error(e);
+                    showToast('❌ 导出失败，请重试');
                 }
             }
 
             function importData(file) {
+                if (!file) {
+                    showToast('请选择一个文件');
+                    return;
+                }
+                
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     try {
@@ -583,21 +594,24 @@
                             if (confirm('导入将覆盖当前所有数据，确认继续？')) {
                                 data = imported;
                                 saveData();
-                                renderHome();
-                                if (currentCatId) {
-                                    currentCatId = null;
-                                    pageHome.classList.add('active');
-                                    pageDetail.classList.remove('active');
-                                    document.getElementById('btn-back').classList.remove('show');
+                                // 如果在详情页，返回首页
+                                if (pageDetail.classList.contains('active')) {
+                                    goHome();
+                                } else {
+                                    renderHome();
                                 }
                                 showToast('✅ 导入成功！共 ' + data.categories.length + ' 个分类');
                             }
                         } else {
-                            showToast('❌ 文件格式无效');
+                            showToast('❌ 文件格式无效，请检查');
                         }
                     } catch(err) {
-                        showToast('❌ 文件解析失败');
+                        console.error(err);
+                        showToast('❌ 文件解析失败，请确认是有效的JSON文件');
                     }
+                };
+                reader.onerror = function() {
+                    showToast('❌ 读取文件失败');
                 };
                 reader.readAsText(file);
             }
@@ -655,17 +669,29 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // 导出
-            document.getElementById('btnExport').addEventListener('click', exportData);
-
-            // 导入：触发文件选择
-            document.getElementById('btnImport').addEventListener('click', function() {
-                document.getElementById('fileInput').click();
+            // ===== 导出按钮（强化） =====
+            var exportBtn = document.getElementById('btnExport');
+            exportBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                exportData();
             });
-            document.getElementById('fileInput').addEventListener('change', function(e) {
+
+            // ===== 导入按钮（强化） =====
+            var fileInput = document.getElementById('fileInput');
+            var importBtn = document.getElementById('btnImport');
+            
+            importBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                // 重置文件输入，确保每次点击都能触发
+                fileInput.value = '';
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function(e) {
                 if (this.files && this.files.length > 0) {
                     importData(this.files[0]);
                 }
+                // 重置，允许重复选择同一个文件
                 this.value = '';
             });
 
