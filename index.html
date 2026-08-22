@@ -625,11 +625,40 @@
                 window.scrollTo(0, 0);
                 setTimeout(function() {
                     var input = document.getElementById('recordInput');
-                    input.focus();
-                    setTimeout(function() {
-                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }, 300);
+                    focusAndScroll(input);
                 }, 300);
+            }
+
+            // ===== 核心：精确滚动到输入框 =====
+            function focusAndScroll(input) {
+                if (!input) return;
+
+                // 先聚焦
+                input.focus();
+
+                // 延迟执行滚动，等待键盘弹出
+                var scrollToInput = function() {
+                    var rect = input.getBoundingClientRect();
+                    var viewHeight = window.innerHeight;
+                    // 计算输入框底部到视口顶部的距离
+                    var inputBottom = rect.bottom;
+                    // 目标：让输入框底部距离视口底部 100px（留出键盘空间）
+                    var targetScroll = window.scrollY + inputBottom - viewHeight + 100;
+                    if (targetScroll < 0) targetScroll = 0;
+
+                    window.scrollTo({
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    });
+                };
+
+                // 立即执行一次
+                scrollToInput();
+
+                // 延迟执行多次，确保键盘完全弹出后也调整
+                setTimeout(scrollToInput, 300);
+                setTimeout(scrollToInput, 600);
+                setTimeout(scrollToInput, 900);
             }
 
             // ===== 数据操作 =====
@@ -743,22 +772,7 @@
                 reader.readAsText(file);
             }
 
-            // ===== 键盘修复：强制滚动到输入框 =====
-            function focusAndScroll(input) {
-                if (!input) return;
-                // 先聚焦
-                input.focus();
-                // 延迟滚动，等待键盘弹出
-                setTimeout(function() {
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 350);
-                // 再次延迟，确保键盘完全弹出后重新调整
-                setTimeout(function() {
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 600);
-            }
-
-            // ===== 获取输入值（不依赖焦点） =====
+            // ===== 获取输入值 =====
             function getCatInputValue() {
                 return document.getElementById('catInput').value;
             }
@@ -771,12 +785,15 @@
 
             document.getElementById('btnBack').onclick = goHome;
 
-            // ===== 新建分类（核心修复） =====
+            // ===== 新建分类 =====
             document.getElementById('btnNewCat').onclick = function() {
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
-                    // 聚焦并强制滚动到输入框
-                    focusAndScroll(catInput);
+                    // 先滚动到页面顶部，再聚焦输入框
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setTimeout(function() {
+                        focusAndScroll(catInput);
+                    }, 300);
                 } else {
                     catInput.value = '';
                     if (document.activeElement) {
@@ -839,11 +856,11 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             };
 
-            // 详情页输入框聚焦时也滚动到可视区域
+            // 详情页输入框聚焦时精确滚动
             recordInput.addEventListener('focus', function() {
                 setTimeout(function() {
-                    recordInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
+                    focusAndScroll(recordInput);
+                }, 100);
             });
 
             document.getElementById('btnExport').onclick = function() {
