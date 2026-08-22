@@ -438,7 +438,7 @@
         </div>
         <div class="input-container" id="homeInput">
             <div class="row">
-                <input type="text" id="catInput" placeholder="输入分类名称..." maxlength="20">
+                <input type="text" id="catInput" placeholder="点击输入分类名称..." maxlength="20">
                 <button class="btn" id="btnSaveCat">创建</button>
                 <button class="btn btn-gray" id="btnCancelCat">取消</button>
             </div>
@@ -612,6 +612,7 @@
                 }, 200);
             });
 
+            // ===== 输入框聚焦/失焦 =====
             document.addEventListener('focusin', function(e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                     keyboardActive = true;
@@ -842,11 +843,10 @@
 
             document.getElementById('btnBack').onclick = goHome;
 
-            // ===== 新建分类（核心修复：先显示输入框，再聚焦） =====
+            // ===== 新建分类（核心修复：不自动聚焦） =====
             document.getElementById('btnNewCat').onclick = function() {
                 var isShowing = homeInput.classList.contains('show');
                 if (isShowing) {
-                    // 如果已显示，则隐藏
                     homeInput.classList.remove('show');
                     catInput.value = '';
                     if (document.activeElement) {
@@ -854,16 +854,16 @@
                     }
                     setTimeout(resetScrollContainer, 100);
                 } else {
-                    // 先显示输入框
+                    // 只显示输入框，不自动聚焦
                     homeInput.classList.add('show');
-                    // 延迟聚焦，确保输入框已经渲染完成
-                    setTimeout(function() {
-                        catInput.focus();
-                        // 聚焦后再调整布局
-                        setTimeout(adjustForKeyboard, 200);
-                    }, 200);
+                    // 确保页面布局稳定
+                    setTimeout(resetScrollContainer, 50);
+                    // 不调用 focus()，让用户手动点击输入框
                 }
             };
+
+            // 用户点击输入框时自然弹出键盘，由系统处理
+            // 不需要额外代码
 
             document.getElementById('btnSaveCat').onclick = function() {
                 var val = getCatInputValue();
