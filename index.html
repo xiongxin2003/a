@@ -12,31 +12,28 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* 整体页面滚动，不再固定高度 */
         html,
         body {
-            height: 100%;
-            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #f5f5f7;
             color: #1c1c1e;
+            min-height: 100vh;
+            padding-bottom: 80px;
+            /* 给底部输入栏留空间 */
         }
 
         /* ===== 页面 ===== */
         .page {
             display: none;
             flex-direction: column;
-            height: 100%;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: #f5f5f7;
+            min-height: 100vh;
         }
         .page.active {
             display: flex;
         }
 
-        /* ===== 顶栏 ===== */
+        /* ===== 顶栏（固定在顶部） ===== */
         .navbar {
             background: #fff;
             padding: 12px 16px;
@@ -46,7 +43,12 @@
             justify-content: space-between;
             flex-shrink: 0;
             min-height: 52px;
-            z-index: 10;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.92);
         }
         .navbar-title {
             font-size: 20px;
@@ -94,17 +96,10 @@
             cursor: pointer;
         }
 
-        /* ===== 滚动区 ===== */
-        .scroll-area {
+        /* ===== 内容区（正常流式布局） ===== */
+        .content {
             flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
             padding: 16px 16px 20px;
-        }
-        .scroll-area::after {
-            content: '';
-            display: block;
-            height: 40px;
         }
 
         /* ===== 分类卡片 ===== */
@@ -203,15 +198,22 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 底部输入栏 ===== */
+        /* ===== 底部输入栏（固定于底部） ===== */
         .bottom-bar {
             background: #fff;
             padding: 10px 16px 14px;
             border-top: 1px solid #e5e5ea;
-            flex-shrink: 0;
             display: flex;
             gap: 10px;
             align-items: flex-end;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         .bottom-bar input,
         .bottom-bar textarea {
@@ -264,12 +266,17 @@
             width: 100%;
         }
 
-        /* ===== 首页输入框（默认隐藏） ===== */
+        /* 首页输入框默认隐藏 */
         #homeInput {
             display: none;
         }
         #homeInput.show {
             display: flex;
+        }
+
+        /* 详情页底部固定，所以内容底部留白 */
+        .detail-content {
+            padding-bottom: 80px;
         }
 
         /* ===== Toast ===== */
@@ -380,7 +387,7 @@
                 font-size: 12px;
                 padding: 4px 8px;
             }
-            .scroll-area {
+            .content {
                 padding: 12px 12px 16px;
             }
             .bottom-bar {
@@ -393,6 +400,13 @@
                 padding: 12px 14px;
                 padding-right: 38px;
             }
+        }
+
+        /* 键盘弹出时，底部栏跟随上移（iOS 自动处理） */
+        /* 但为了防止底部栏遮挡内容，输入框聚焦时滚动到可视区域 */
+        .bottom-bar input:focus,
+        .bottom-bar textarea:focus {
+            /* 不做特殊处理，让浏览器自然表现 */
         }
     </style>
 </head>
@@ -423,9 +437,10 @@
                 <button class="navbar-btn" id="btnNewCat">+ 新建</button>
             </div>
         </div>
-        <div class="scroll-area" id="homeScroll">
+        <div class="content">
             <div id="homeList"></div>
         </div>
+        <!-- 底部输入栏固定在页面底部 -->
         <div class="bottom-bar" id="homeInput">
             <div class="row">
                 <input type="text" id="catInput" placeholder="输入分类名称..." maxlength="20">
@@ -442,7 +457,7 @@
             <span class="navbar-title" id="detailTitle">分类</span>
             <button class="navbar-danger" id="btnDelCat">删除</button>
         </div>
-        <div class="scroll-area" id="detailScroll">
+        <div class="content detail-content">
             <div id="detailList"></div>
         </div>
         <div class="bottom-bar">
@@ -526,8 +541,6 @@
             }
 
             // ===== DOM =====
-            var homeScroll = document.getElementById('homeScroll');
-            var detailScroll = document.getElementById('detailScroll');
             var homeList = document.getElementById('homeList');
             var detailList = document.getElementById('detailList');
             var detailTitle = document.getElementById('detailTitle');
@@ -537,7 +550,6 @@
             // ===== 渲染首页 =====
             function renderHome() {
                 var cats = data.categories || [];
-                var top = homeScroll.scrollTop;
                 if (cats.length === 0) {
                     homeList.innerHTML = '<div class="empty"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
                     return;
@@ -554,16 +566,13 @@
                     html += '</div></div>';
                 }
                 homeList.innerHTML = html;
-                homeScroll.scrollTop = top;
 
-                // 点击分类 → 进入详情
                 homeList.querySelectorAll('.cat-item').forEach(function(el) {
                     el.onclick = function(e) {
                         if (e.target.closest('.cat-del')) return;
                         enterDetail(this.dataset.id);
                     };
                 });
-                // 删除分类
                 homeList.querySelectorAll('.cat-del').forEach(function(btn) {
                     btn.onclick = function(e) {
                         e.stopPropagation();
@@ -577,7 +586,6 @@
             // ===== 渲染详情 =====
             function renderDetail(id) {
                 var cat = findCat(id);
-                var top = detailScroll.scrollTop;
                 if (!cat) { goHome(); return; }
                 detailTitle.textContent = cat.name;
                 var recs = cat.records || [];
@@ -595,7 +603,6 @@
                     html += '</div>';
                 }
                 detailList.innerHTML = html;
-                detailScroll.scrollTop = top;
 
                 detailList.querySelectorAll('.rec-del').forEach(function(btn) {
                     btn.onclick = function() {
@@ -615,7 +622,7 @@
                 homeInput.classList.remove('show');
                 catInput.value = '';
                 renderHome();
-                homeScroll.scrollTop = 0;
+                window.scrollTo(0, 0);
             }
 
             function enterDetail(id) {
@@ -624,7 +631,7 @@
                 document.getElementById('pageDetail').classList.add('active');
                 document.getElementById('btnBack').classList.add('show');
                 renderDetail(id);
-                detailScroll.scrollTop = 0;
+                window.scrollTo(0, 0);
                 setTimeout(function() {
                     document.getElementById('recordInput').focus();
                 }, 300);
@@ -643,6 +650,7 @@
                 toast('✅ 已创建');
                 catInput.value = '';
                 homeInput.classList.remove('show');
+                window.scrollTo(0, 0);
             }
 
             function delCategory(id) {
@@ -665,10 +673,14 @@
                 cat.records.push({ id: genId(), text: t, time: getTime() });
                 save();
                 renderDetail(id);
-                document.getElementById('recordInput').value = '';
+                var input = document.getElementById('recordInput');
+                input.value = '';
+                input.style.height = 'auto';
                 toast('✅ 已添加');
-                var ta = document.getElementById('recordInput');
-                ta.style.height = 'auto';
+                // 滚动到顶部，避免键盘收起后页面卡在中间
+                setTimeout(function() {
+                    window.scrollTo(0, 0);
+                }, 100);
             }
 
             function delRecord(catId, recId) {
@@ -731,33 +743,43 @@
                 reader.readAsText(file);
             }
 
+            // ===== 键盘修复 =====
+            function fixKeyboardScroll() {
+                // 监听输入框失焦，重置滚动到顶部
+                var inputs = document.querySelectorAll('input, textarea');
+                inputs.forEach(function(input) {
+                    input.addEventListener('blur', function() {
+                        setTimeout(function() {
+                            window.scrollTo(0, 0);
+                        }, 150);
+                    });
+                });
+            }
+
             // ===== 事件绑定 =====
 
-            // 返回
             document.getElementById('btnBack').onclick = goHome;
 
-            // 新建分类（切换输入框显示）
             document.getElementById('btnNewCat').onclick = function() {
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
-                    setTimeout(function() { catInput.focus(); }, 200);
+                    setTimeout(function() {
+                        catInput.focus();
+                    }, 200);
                 } else {
                     catInput.value = '';
                 }
             };
 
-            // 创建分类
             document.getElementById('btnSaveCat').onclick = function() {
                 addCategory(catInput.value);
             };
 
-            // 取消创建
             document.getElementById('btnCancelCat').onclick = function() {
                 homeInput.classList.remove('show');
                 catInput.value = '';
             };
 
-            // 分类输入框回车
             catInput.onkeydown = function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -765,7 +787,6 @@
                 }
             };
 
-            // 删除分类（详情页）
             document.getElementById('btnDelCat').onclick = function() {
                 if (!currentId) return;
                 if (confirm('确定删除这个分类吗？')) {
@@ -773,7 +794,6 @@
                 }
             };
 
-            // 添加记录
             var recordInput = document.getElementById('recordInput');
             var addBtn = document.getElementById('btnAddRecord');
 
@@ -794,12 +814,10 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             };
 
-            // 导出
             document.getElementById('btnExport').onclick = function() {
                 document.getElementById('exportModal').classList.add('show');
             };
 
-            // 导入
             var fileInput = document.getElementById('fileInput');
             document.getElementById('btnImport').onclick = function() {
                 fileInput.value = '';
@@ -812,7 +830,6 @@
                 this.value = '';
             };
 
-            // 导出弹窗
             document.getElementById('exportNewBtn').onclick = function() {
                 doExport('记录本_备份_' + getTimeFile() + '.json');
                 document.getElementById('exportModal').classList.remove('show');
@@ -831,7 +848,6 @@
                 }
             };
 
-            // 点击空白关闭首页输入框
             document.onclick = function(e) {
                 if (homeInput.classList.contains('show')) {
                     if (!e.target.closest('#homeInput') && !e.target.closest('#btnNewCat')) {
@@ -840,6 +856,9 @@
                     }
                 }
             };
+
+            // ===== 启动键盘修复 =====
+            fixKeyboardScroll();
 
             // ===== 启动 =====
             load();
