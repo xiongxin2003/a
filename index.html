@@ -15,15 +15,16 @@
         html, body {
             height: 100%;
             overflow: hidden;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #f5f5f7;
             color: #1c1c1e;
-            display: flex;
-            flex-direction: column;
-            position: relative;
         }
 
         /* ===== 顶栏 ===== */
@@ -92,22 +93,38 @@
             cursor: pointer;
         }
 
-        /* ===== 滚动容器（核心修复） ===== */
+        /* ===== 页面容器 ===== */
+        .page {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #f5f5f7;
+            overflow: hidden;
+        }
+        .page.active {
+            display: flex;
+        }
+
+        /* ===== 滚动容器 ===== */
         .scroll-container {
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
             padding: 16px 16px 20px;
-            /* 底部留白，让滚动有弹性空间 */
             min-height: 0;
+            /* 关键：确保 flex 子项可以收缩 */
         }
 
-        /* 内容底部额外留白，保证弹性滑动 */
+        /* 底部留白，保证弹性滑动 */
         .scroll-container::after {
             content: '';
             display: block;
-            height: 40px;
+            height: 60px;
             width: 100%;
             flex-shrink: 0;
         }
@@ -117,7 +134,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            padding-bottom: 8px;
+            padding-bottom: 4px;
         }
         .category-item {
             background: #ffffff;
@@ -170,7 +187,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 8px;
+            padding-bottom: 4px;
         }
         .record-item {
             background: #ffffff;
@@ -243,6 +260,7 @@
             background: #f8f8fa;
             line-height: 1.4;
             min-height: 42px;
+            max-height: 120px;
         }
         .bottom-bar input:focus,
         .bottom-bar textarea:focus {
@@ -251,7 +269,6 @@
         }
         .bottom-bar textarea {
             resize: none;
-            max-height: 120px;
         }
         .bottom-bar .btn {
             background: #007aff;
@@ -277,27 +294,12 @@
             gap: 10px;
             width: 100%;
         }
-        /* 创建分类的输入栏（在底部） */
+
+        /* ===== 首页输入框（默认隐藏） ===== */
         #home-input {
             display: none;
         }
         #home-input.show {
-            display: flex;
-        }
-
-        /* ===== 页面容器 ===== */
-        .page {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #f5f5f7;
-        }
-        .page.active {
             display: flex;
         }
 
@@ -556,7 +558,7 @@
                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
-            // ===== 渲染（保留滚动位置） =====
+            // ===== 渲染 =====
             function renderHome() {
                 var cats = data.categories || [];
                 var scrollTop = homeScroll.scrollTop || 0;
@@ -584,7 +586,6 @@
                 html += '</div>';
                 container.innerHTML = html;
 
-                // 恢复滚动位置
                 requestAnimationFrame(function() {
                     homeScroll.scrollTop = scrollTop;
                 });
@@ -654,6 +655,8 @@
                 homeInput.classList.remove('show');
                 catInput.value = '';
                 renderHome();
+                // 重置滚动到顶部
+                homeScroll.scrollTop = 0;
             }
 
             function enterDetail(catId) {
@@ -662,6 +665,8 @@
                 pageDetail.classList.add('active');
                 document.getElementById('btn-back').classList.add('show');
                 renderDetail(catId);
+                // 重置滚动到顶部
+                detailScroll.scrollTop = 0;
                 setTimeout(function() {
                     document.getElementById('record-input').focus();
                 }, 350);
@@ -824,7 +829,6 @@
             // ===== 事件绑定 =====
             document.getElementById('btn-back').addEventListener('click', goHome);
 
-            // 新建分类 - 切换显示
             document.getElementById('btn-new-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
                 homeInput.classList.toggle('show');
@@ -898,7 +902,7 @@
                 this.value = '';
             });
 
-            // ===== 点击页面空白关闭输入框 =====
+            // ===== 点击页面空白关闭输入框（首页） =====
             document.addEventListener('click', function(e) {
                 var target = e.target;
                 if (homeInput.classList.contains('show')) {
@@ -909,6 +913,23 @@
                         catInput.value = '';
                     }
                 }
+            });
+
+            // ===== 键盘弹出时保持布局 =====
+            // iOS 上输入框聚焦时，滚动到可见区域
+            var activeInputs = [catInput, recordInput];
+            activeInputs.forEach(function(input) {
+                if (!input) return;
+                input.addEventListener('focus', function() {
+                    // 延迟执行，等待键盘弹出
+                    setTimeout(function() {
+                        if (input === catInput && homeInput.classList.contains('show')) {
+                            homeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        } else if (input === recordInput) {
+                            // 详情页的输入框在底部，不需要额外滚动
+                        }
+                    }, 300);
+                });
             });
 
             // ===== 启动 =====
