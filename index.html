@@ -41,7 +41,6 @@
             display: flex;
         }
 
-        /* ===== 顶栏 ===== */
         .navbar {
             background: #fff;
             padding: 12px 16px;
@@ -99,7 +98,6 @@
             cursor: pointer;
         }
 
-        /* ===== 分类滚动容器 ===== */
         .category-scroll {
             flex: 1 1 auto;
             overflow-y: auto;
@@ -107,7 +105,6 @@
             padding: 16px 16px 30px;
             overscroll-behavior: contain;
             min-height: 0;
-            /* 关键：让 flex 可以压缩它 */;
         }
         .category-scroll::before {
             content: '';
@@ -122,7 +119,6 @@
             flex-shrink: 0;
         }
 
-        /* ===== 分类卡片 ===== */
         .cat-item {
             background: #fff;
             border-radius: 12px;
@@ -168,7 +164,6 @@
             opacity: 1;
         }
 
-        /* ===== 记录卡片 ===== */
         .rec-item {
             background: #fff;
             border-radius: 12px;
@@ -204,7 +199,6 @@
             opacity: 1;
         }
 
-        /* ===== 空状态 ===== */
         .empty {
             text-align: center;
             color: #8e8e93;
@@ -218,7 +212,6 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 输入框容器 ===== */
         .input-container {
             flex-shrink: 0;
             background: #fff;
@@ -231,7 +224,6 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            /* 关键：固定高度，不被压缩 */
             min-height: 66px;
         }
         .input-container input,
@@ -292,7 +284,6 @@
             display: flex;
         }
 
-        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -314,7 +305,6 @@
             opacity: 1;
         }
 
-        /* ===== 弹窗 ===== */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -422,7 +412,6 @@
     <div class="toast" id="toast"></div>
     <input type="file" id="fileInput" accept=".json">
 
-    <!-- ===== 导出弹窗 ===== -->
     <div class="modal-overlay" id="exportModal">
         <div class="modal-box">
             <div class="modal-title">📤 导出数据</div>
@@ -555,38 +544,29 @@
             var homeScroll = document.getElementById('homeScroll');
             var detailScroll = document.getElementById('detailScroll');
 
-            // ===== 键盘适配：用 visualViewport 精确控制 =====
+            // ===== 键盘适配 =====
             var keyboardActive = false;
 
             function adjustForKeyboard() {
                 var activePage = document.querySelector('.page.active');
                 if (!activePage) return;
-
                 var scrollEl = activePage.querySelector('.category-scroll');
                 var inputEl = activePage.querySelector('.input-container');
                 var navbarEl = activePage.querySelector('.navbar');
-
                 if (!scrollEl || !inputEl) return;
 
-                // 获取各元素高度
                 var navHeight = navbarEl ? navbarEl.offsetHeight : 52;
                 var inputHeight = inputEl.offsetHeight || 66;
-
-                // 使用 visualViewport 获取当前可视区域高度
                 var viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
-                // 计算滚动容器应该占的高度
                 var scrollHeight = viewHeight - navHeight - inputHeight - 2;
-
                 if (scrollHeight < 50) scrollHeight = 50;
 
-                // 设置滚动容器高度
                 scrollEl.style.flex = 'none';
                 scrollEl.style.height = scrollHeight + 'px';
                 scrollEl.style.minHeight = scrollHeight + 'px';
                 scrollEl.style.maxHeight = scrollHeight + 'px';
 
-                // 如果键盘弹起，滚动到顶部
                 if (keyboardActive) {
                     scrollEl.scrollTop = 0;
                 }
@@ -597,55 +577,41 @@
                 if (!activePage) return;
                 var scrollEl = activePage.querySelector('.category-scroll');
                 if (!scrollEl) return;
-
-                // 恢复 flex 自动高度
                 scrollEl.style.flex = '1 1 auto';
                 scrollEl.style.height = '';
                 scrollEl.style.minHeight = '';
                 scrollEl.style.maxHeight = '';
             }
 
-            // ===== 监听 visualViewport 变化 =====
             if (window.visualViewport) {
                 var lastHeight = window.visualViewport.height;
                 var viewport = window.visualViewport;
-
                 viewport.addEventListener('resize', function() {
                     var currentHeight = viewport.height;
                     var diff = Math.abs(currentHeight - lastHeight);
-
-                    // 高度变化超过 50px 说明键盘弹起或收起
                     if (diff > 50) {
                         if (currentHeight < lastHeight) {
-                            // 键盘弹起
                             keyboardActive = true;
                             setTimeout(adjustForKeyboard, 50);
                             setTimeout(adjustForKeyboard, 200);
                             setTimeout(adjustForKeyboard, 400);
                         } else {
-                            // 键盘收起
                             keyboardActive = false;
-                            setTimeout(function() {
-                                resetScrollContainer();
-                            }, 100);
+                            setTimeout(function() { resetScrollContainer(); }, 100);
                         }
                     }
                     lastHeight = currentHeight;
                 });
             }
 
-            // ===== 窗口 resize 备用 =====
             var resizeTimer = null;
             window.addEventListener('resize', function() {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(function() {
-                    if (keyboardActive) {
-                        adjustForKeyboard();
-                    }
+                    if (keyboardActive) adjustForKeyboard();
                 }, 200);
             });
 
-            // ===== 输入框聚焦/失焦 =====
             document.addEventListener('focusin', function(e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                     keyboardActive = true;
@@ -658,13 +624,11 @@
             document.addEventListener('focusout', function(e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                     keyboardActive = false;
-                    setTimeout(function() {
-                        resetScrollContainer();
-                    }, 150);
+                    setTimeout(function() { resetScrollContainer(); }, 150);
                 }
             });
 
-            // ===== 渲染首页 =====
+            // ===== 渲染 =====
             function renderHome() {
                 var cats = data.categories || [];
                 var scrollTop = homeScroll.scrollTop || 0;
@@ -703,7 +667,6 @@
                 });
             }
 
-            // ===== 渲染详情 =====
             function renderDetail(id) {
                 var cat = findCat(id);
                 var scrollTop = detailScroll.scrollTop || 0;
@@ -746,9 +709,7 @@
                 catInput.value = '';
                 renderHome();
                 homeScroll.scrollTop = 0;
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
+                if (document.activeElement) document.activeElement.blur();
                 setTimeout(resetScrollContainer, 100);
             }
 
@@ -777,9 +738,7 @@
                 toast('✅ 已创建');
                 catInput.value = '';
                 homeInput.classList.remove('show');
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
+                if (document.activeElement) document.activeElement.blur();
                 setTimeout(resetScrollContainer, 100);
             }
 
@@ -807,9 +766,7 @@
                 input.value = '';
                 input.style.height = 'auto';
                 toast('✅ 已添加');
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
+                if (document.activeElement) document.activeElement.blur();
                 setTimeout(resetScrollContainer, 100);
             }
 
@@ -873,7 +830,6 @@
                 reader.readAsText(file);
             }
 
-            // ===== 获取输入值 =====
             function getCatInputValue() {
                 return document.getElementById('catInput').value;
             }
@@ -886,18 +842,26 @@
 
             document.getElementById('btnBack').onclick = goHome;
 
+            // ===== 新建分类（核心修复：先显示输入框，再聚焦） =====
             document.getElementById('btnNewCat').onclick = function() {
-                homeInput.classList.toggle('show');
-                if (homeInput.classList.contains('show')) {
-                    setTimeout(function() {
-                        catInput.focus();
-                    }, 300);
-                } else {
+                var isShowing = homeInput.classList.contains('show');
+                if (isShowing) {
+                    // 如果已显示，则隐藏
+                    homeInput.classList.remove('show');
                     catInput.value = '';
                     if (document.activeElement) {
                         document.activeElement.blur();
                     }
                     setTimeout(resetScrollContainer, 100);
+                } else {
+                    // 先显示输入框
+                    homeInput.classList.add('show');
+                    // 延迟聚焦，确保输入框已经渲染完成
+                    setTimeout(function() {
+                        catInput.focus();
+                        // 聚焦后再调整布局
+                        setTimeout(adjustForKeyboard, 200);
+                    }, 200);
                 }
             };
 
@@ -955,18 +919,14 @@
 
             document.getElementById('btnExport').onclick = function() {
                 document.getElementById('exportModal').classList.add('show');
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
+                if (document.activeElement) document.activeElement.blur();
             };
 
             var fileInput = document.getElementById('fileInput');
             document.getElementById('btnImport').onclick = function() {
                 fileInput.value = '';
                 fileInput.click();
-                if (document.activeElement) {
-                    document.activeElement.blur();
-                }
+                if (document.activeElement) document.activeElement.blur();
             };
             fileInput.onchange = function() {
                 if (this.files && this.files.length > 0) {
