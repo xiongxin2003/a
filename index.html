@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的记录本</title>
     <style>
         * {
@@ -26,7 +27,6 @@
             left: 0;
         }
 
-        /* ===== 页面容器 ===== */
         .page {
             display: none;
             flex-direction: column;
@@ -99,25 +99,22 @@
             cursor: pointer;
         }
 
-        /* ===== 分类滚动容器（独立滚动，上下有余量） ===== */
+        /* ===== 分类滚动容器 ===== */
         .category-scroll {
-            flex: 1;
+            flex: 1 1 auto;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 16px 16px 30px;
-            /* 上下余量 */
             overscroll-behavior: contain;
-            /* 关键：不传递滚动到父级 */
             min-height: 0;
+            /* 关键：让 flex 可以压缩它 */;
         }
-        /* 顶部余量 */
         .category-scroll::before {
             content: '';
             display: block;
             height: 8px;
             flex-shrink: 0;
         }
-        /* 底部余量 */
         .category-scroll::after {
             content: '';
             display: block;
@@ -221,7 +218,7 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 底部输入框容器（固定在底部，键盘弹出时跟随上移） ===== */
+        /* ===== 输入框容器 ===== */
         .input-container {
             flex-shrink: 0;
             background: #fff;
@@ -234,8 +231,8 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            /* 关键：让输入框固定在底部，键盘弹出时自然跟随 */
-            position: relative;
+            /* 关键：固定高度，不被压缩 */
+            min-height: 66px;
         }
         .input-container input,
         .input-container textarea {
@@ -288,7 +285,6 @@
             width: 100%;
         }
 
-        /* 首页输入框默认隐藏 */
         #homeInput {
             display: none;
         }
@@ -409,6 +405,7 @@
             }
             .input-container {
                 padding: 8px 12px 12px;
+                min-height: 58px;
             }
             .cat-item {
                 padding: 12px 14px;
@@ -558,10 +555,118 @@
             var homeScroll = document.getElementById('homeScroll');
             var detailScroll = document.getElementById('detailScroll');
 
+            // ===== 键盘适配：用 visualViewport 精确控制 =====
+            var keyboardActive = false;
+
+            function adjustForKeyboard() {
+                var activePage = document.querySelector('.page.active');
+                if (!activePage) return;
+
+                var scrollEl = activePage.querySelector('.category-scroll');
+                var inputEl = activePage.querySelector('.input-container');
+                var navbarEl = activePage.querySelector('.navbar');
+
+                if (!scrollEl || !inputEl) return;
+
+                // 获取各元素高度
+                var navHeight = navbarEl ? navbarEl.offsetHeight : 52;
+                var inputHeight = inputEl.offsetHeight || 66;
+
+                // 使用 visualViewport 获取当前可视区域高度
+                var viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+                // 计算滚动容器应该占的高度
+                var scrollHeight = viewHeight - navHeight - inputHeight - 2;
+
+                if (scrollHeight < 50) scrollHeight = 50;
+
+                // 设置滚动容器高度
+                scrollEl.style.flex = 'none';
+                scrollEl.style.height = scrollHeight + 'px';
+                scrollEl.style.minHeight = scrollHeight + 'px';
+                scrollEl.style.maxHeight = scrollHeight + 'px';
+
+                // 如果键盘弹起，滚动到顶部
+                if (keyboardActive) {
+                    scrollEl.scrollTop = 0;
+                }
+            }
+
+            function resetScrollContainer() {
+                var activePage = document.querySelector('.page.active');
+                if (!activePage) return;
+                var scrollEl = activePage.querySelector('.category-scroll');
+                if (!scrollEl) return;
+
+                // 恢复 flex 自动高度
+                scrollEl.style.flex = '1 1 auto';
+                scrollEl.style.height = '';
+                scrollEl.style.minHeight = '';
+                scrollEl.style.maxHeight = '';
+            }
+
+            // ===== 监听 visualViewport 变化 =====
+            if (window.visualViewport) {
+                var lastHeight = window.visualViewport.height;
+                var viewport = window.visualViewport;
+
+                viewport.addEventListener('resize', function() {
+                    var currentHeight = viewport.height;
+                    var diff = Math.abs(currentHeight - lastHeight);
+
+                    // 高度变化超过 50px 说明键盘弹起或收起
+                    if (diff > 50) {
+                        if (currentHeight < lastHeight) {
+                            // 键盘弹起
+                            keyboardActive = true;
+                            setTimeout(adjustForKeyboard, 50);
+                            setTimeout(adjustForKeyboard, 200);
+                            setTimeout(adjustForKeyboard, 400);
+                        } else {
+                            // 键盘收起
+                            keyboardActive = false;
+                            setTimeout(function() {
+                                resetScrollContainer();
+                            }, 100);
+                        }
+                    }
+                    lastHeight = currentHeight;
+                });
+            }
+
+            // ===== 窗口 resize 备用 =====
+            var resizeTimer = null;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (keyboardActive) {
+                        adjustForKeyboard();
+                    }
+                }, 200);
+            });
+
+            // ===== 输入框聚焦/失焦 =====
+            document.addEventListener('focusin', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    keyboardActive = true;
+                    setTimeout(adjustForKeyboard, 100);
+                    setTimeout(adjustForKeyboard, 300);
+                    setTimeout(adjustForKeyboard, 500);
+                }
+            });
+
+            document.addEventListener('focusout', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    keyboardActive = false;
+                    setTimeout(function() {
+                        resetScrollContainer();
+                    }, 150);
+                }
+            });
+
             // ===== 渲染首页 =====
             function renderHome() {
                 var cats = data.categories || [];
-                // 保存滚动位置
                 var scrollTop = homeScroll.scrollTop || 0;
                 if (cats.length === 0) {
                     homeList.innerHTML = '<div class="empty"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
@@ -580,7 +685,6 @@
                     html += '</div></div>';
                 }
                 homeList.innerHTML = html;
-                // 恢复滚动位置
                 homeScroll.scrollTop = scrollTop;
 
                 homeList.querySelectorAll('.cat-item').forEach(function(el) {
@@ -645,6 +749,7 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
+                setTimeout(resetScrollContainer, 100);
             }
 
             function enterDetail(id) {
@@ -675,6 +780,7 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
+                setTimeout(resetScrollContainer, 100);
             }
 
             function delCategory(id) {
@@ -704,6 +810,7 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
+                setTimeout(resetScrollContainer, 100);
             }
 
             function delRecord(catId, recId) {
@@ -790,6 +897,7 @@
                     if (document.activeElement) {
                         document.activeElement.blur();
                     }
+                    setTimeout(resetScrollContainer, 100);
                 }
             };
 
@@ -804,6 +912,7 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
+                setTimeout(resetScrollContainer, 100);
             };
 
             catInput.onkeydown = function(e) {
@@ -892,6 +1001,7 @@
                         if (document.activeElement) {
                             document.activeElement.blur();
                         }
+                        setTimeout(resetScrollContainer, 100);
                     }
                 }
             };
@@ -899,6 +1009,7 @@
             // ===== 启动 =====
             load();
             renderHome();
+            setTimeout(resetScrollContainer, 100);
             toast('📒 点击分类进入');
         })();
     </script>
