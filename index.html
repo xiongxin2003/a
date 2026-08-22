@@ -629,7 +629,7 @@
                 }, 300);
             }
 
-            // ===== 核心：精确滚动到输入框 =====
+            // ===== 核心：精确滚动到输入框（不先滚动到顶部） =====
             function focusAndScroll(input) {
                 if (!input) return;
 
@@ -640,10 +640,10 @@
                 var scrollToInput = function() {
                     var rect = input.getBoundingClientRect();
                     var viewHeight = window.innerHeight;
-                    // 计算输入框底部到视口顶部的距离
+                    // 输入框底部到视口顶部的距离
                     var inputBottom = rect.bottom;
-                    // 目标：让输入框底部距离视口底部 100px（留出键盘空间）
-                    var targetScroll = window.scrollY + inputBottom - viewHeight + 100;
+                    // 目标：让输入框底部距离视口底部 120px（留出键盘空间）
+                    var targetScroll = window.scrollY + inputBottom - viewHeight + 120;
                     if (targetScroll < 0) targetScroll = 0;
 
                     window.scrollTo({
@@ -785,15 +785,14 @@
 
             document.getElementById('btnBack').onclick = goHome;
 
-            // ===== 新建分类 =====
+            // ===== 新建分类（核心修复：不预先滚动到顶部） =====
             document.getElementById('btnNewCat').onclick = function() {
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
-                    // 先滚动到页面顶部，再聚焦输入框
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    // 直接聚焦并滚动到输入框，不预先滚动到顶部
                     setTimeout(function() {
                         focusAndScroll(catInput);
-                    }, 300);
+                    }, 100);
                 } else {
                     catInput.value = '';
                     if (document.activeElement) {
