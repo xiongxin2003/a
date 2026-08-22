@@ -31,6 +31,7 @@
             flex-wrap: wrap;
             gap: 6px;
             min-height: 52px;
+            z-index: 10;
         }
         .navbar-title {
             font-size: 20px;
@@ -50,6 +51,7 @@
             font-weight: 500;
             cursor: pointer;
             border-radius: 6px;
+            -webkit-touch-callout: none;
         }
         .navbar-btn:active {
             background: #e8e8ed;
@@ -611,6 +613,7 @@
                 pageHome.classList.add('active');
                 pageDetail.classList.remove('active');
                 document.getElementById('btn-back').classList.remove('show');
+                // 关闭输入框
                 homeInput.style.display = 'none';
                 catInput.value = '';
                 renderHome();
@@ -696,7 +699,6 @@
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                     }, 1000);
-                    // 记录上次导出的文件名
                     try {
                         localStorage.setItem(LAST_EXPORT_KEY, filename);
                     } catch(e) {}
@@ -722,7 +724,6 @@
                 if (lastFilename) {
                     performExport(lastFilename);
                 } else {
-                    // 如果没有上次存档记录，自动用新建模式
                     exportNew();
                 }
                 closeExportModal();
@@ -739,7 +740,6 @@
                 exportModal.classList.remove('show');
             }
 
-            // 点击背景关闭
             exportModal.addEventListener('click', function(e) {
                 if (e.target === exportModal) {
                     closeExportModal();
@@ -785,28 +785,42 @@
                 reader.readAsText(file);
             }
 
-            // ===== 事件绑定 =====
+            // ===== 事件绑定（使用独立监听，避免冲突） =====
+
+            // 返回
             document.getElementById('btn-back').addEventListener('click', goHome);
 
-            document.getElementById('btn-new-cat').addEventListener('click', function() {
-                if (homeInput.style.display === 'flex') {
+            // 新建分类 - 使用独立逻辑，阻止事件冒泡
+            document.getElementById('btn-new-cat').addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                var currentDisplay = homeInput.style.display;
+                if (currentDisplay === 'flex') {
                     homeInput.style.display = 'none';
                     catInput.value = '';
                 } else {
                     homeInput.style.display = 'flex';
-                    setTimeout(function() { catInput.focus(); }, 100);
+                    // 延迟聚焦，确保输入框已显示
+                    setTimeout(function() {
+                        catInput.focus();
+                    }, 150);
                 }
             });
 
-            document.getElementById('btn-save-cat').addEventListener('click', function() {
+            // 创建分类
+            document.getElementById('btn-save-cat').addEventListener('click', function(e) {
+                e.stopPropagation();
                 addCategory(catInput.value);
             });
 
-            document.getElementById('btn-cancel-cat').addEventListener('click', function() {
+            // 取消创建
+            document.getElementById('btn-cancel-cat').addEventListener('click', function(e) {
+                e.stopPropagation();
                 homeInput.style.display = 'none';
                 catInput.value = '';
             });
 
+            // 分类输入框回车
             catInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -814,6 +828,7 @@
                 }
             });
 
+            // 删除分类
             document.getElementById('btn-del-cat').addEventListener('click', function() {
                 if (!currentCatId) return;
                 if (confirm('确定删除这个分类吗？（其中的记录也会被删除）')) {
@@ -821,6 +836,7 @@
                 }
             });
 
+            // 添加记录
             document.getElementById('btn-add-record').addEventListener('click', function() {
                 if (!currentCatId) { showToast('请先选择分类'); return; }
                 addRecord(currentCatId, document.getElementById('record-input').value);
@@ -838,13 +854,13 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // ===== 导出按钮 =====
+            // 导出
             document.getElementById('btnExport').addEventListener('click', function(e) {
                 e.preventDefault();
                 showExportModal();
             });
 
-            // ===== 导入按钮 =====
+            // 导入
             var fileInput = document.getElementById('fileInput');
             document.getElementById('btnImport').addEventListener('click', function(e) {
                 e.preventDefault();
@@ -859,11 +875,16 @@
                 this.value = '';
             });
 
-            // ===== 点击空白关闭输入框 =====
-            document.addEventListener('touchstart', function(e) {
+            // ===== 点击页面空白关闭输入框 =====
+            // 使用独立的监听，只在点击空白区域时触发
+            document.addEventListener('click', function(e) {
                 var target = e.target;
+                // 如果输入框是显示状态
                 if (homeInput.style.display === 'flex') {
-                    if (!target.closest('#home-input') && !target.closest('#btn-new-cat')) {
+                    // 判断点击是否在输入框区域内，或新建按钮上
+                    var isInputArea = target.closest('#home-input');
+                    var isNewBtn = target.closest('#btn-new-cat');
+                    if (!isInputArea && !isNewBtn) {
                         homeInput.style.display = 'none';
                         catInput.value = '';
                     }
