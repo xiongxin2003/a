@@ -20,39 +20,51 @@
             flex-direction: column;
             overflow: hidden;
         }
-
-        /* ===== 顶栏 ===== */
         .navbar {
             background: #ffffff;
-            padding: 16px 20px 12px;
+            padding: 12px 16px;
             border-bottom: 1px solid #e5e5ea;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-shrink: 0;
+            flex-wrap: wrap;
+            gap: 6px;
         }
         .navbar-title {
             font-size: 20px;
             font-weight: 700;
         }
+        .navbar-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
         .navbar-btn {
-            font-size: 15px;
+            font-size: 14px;
             color: #007aff;
             background: none;
             border: none;
-            padding: 6px 12px;
+            padding: 4px 10px;
             font-weight: 500;
             cursor: pointer;
+            border-radius: 6px;
         }
         .navbar-btn:active {
-            opacity: 0.6;
+            background: #e8e8ed;
+        }
+        .navbar-btn.export-btn {
+            color: #34c759;
+        }
+        .navbar-btn.import-btn {
+            color: #ff9500;
         }
         .navbar-back {
             font-size: 16px;
             color: #007aff;
             background: none;
             border: none;
-            padding: 6px 8px;
+            padding: 4px 8px;
             font-weight: 500;
             cursor: pointer;
             display: none;
@@ -66,27 +78,23 @@
             align-items: center;
         }
         .navbar-btn-danger {
-            font-size: 15px;
+            font-size: 14px;
             color: #ff3b30;
             background: none;
             border: none;
-            padding: 6px 12px;
+            padding: 4px 10px;
             font-weight: 500;
             cursor: pointer;
         }
         .navbar-btn-danger:active {
             opacity: 0.6;
         }
-
-        /* ===== 主内容 ===== */
         .main-content {
             flex: 1;
             overflow-y: auto;
             padding: 16px 16px 12px;
             -webkit-overflow-scrolling: touch;
         }
-
-        /* ===== 分类列表 ===== */
         .category-list {
             display: flex;
             flex-direction: column;
@@ -95,13 +103,12 @@
         .category-item {
             background: #ffffff;
             border-radius: 12px;
-            padding: 16px 18px;
+            padding: 14px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            transition: background 0.15s;
         }
         .category-item:active {
             background: #e8e8ed;
@@ -113,13 +120,13 @@
         .category-meta {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .category-count {
             font-size: 13px;
             color: #8e8e93;
             background: #f2f2f7;
-            padding: 2px 12px;
+            padding: 2px 10px;
             border-radius: 30px;
         }
         .category-del {
@@ -134,8 +141,6 @@
         .category-del:active {
             opacity: 1;
         }
-
-        /* ===== 记录列表 ===== */
         .record-list {
             display: flex;
             flex-direction: column;
@@ -174,8 +179,6 @@
         .record-del:active {
             opacity: 1;
         }
-
-        /* ===== 空状态 ===== */
         .empty-state {
             text-align: center;
             color: #8e8e93;
@@ -188,8 +191,6 @@
             display: block;
             margin-bottom: 12px;
         }
-
-        /* ===== 底部输入 ===== */
         .bottom-bar {
             background: #ffffff;
             padding: 10px 16px 14px;
@@ -249,8 +250,6 @@
             gap: 10px;
             width: 100%;
         }
-
-        /* ===== 页面切换 ===== */
         .page {
             display: none;
             flex-direction: column;
@@ -259,8 +258,6 @@
         .page.active {
             display: flex;
         }
-
-        /* ===== 提示 ===== */
         .toast {
             position: fixed;
             bottom: 90px;
@@ -281,27 +278,35 @@
         .toast.show {
             opacity: 1;
         }
-
-        /* ===== 响应式 ===== */
+        /* 隐藏的文件输入 */
+        #fileInput {
+            display: none;
+        }
         @media (max-width: 480px) {
-            .navbar { padding: 12px 14px 10px; }
+            .navbar { padding: 10px 12px; }
+            .navbar-title { font-size: 18px; }
+            .navbar-btn { font-size: 13px; padding: 4px 8px; }
             .main-content { padding: 12px 12px 8px; }
             .bottom-bar { padding: 8px 12px 12px; }
-            .category-item { padding: 14px 14px; }
+            .category-item { padding: 12px 14px; }
             .record-item { padding: 12px 14px; padding-right: 38px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ===== Toast ===== -->
     <div class="toast" id="toast"></div>
+    <input type="file" id="fileInput" accept=".json">
 
-    <!-- ===== 首页（分类列表） ===== -->
+    <!-- ===== 首页 ===== -->
     <div id="page-home" class="page active">
         <div class="navbar">
             <span class="navbar-title">📒 记录本</span>
-            <button class="navbar-btn" id="btn-new-cat">+ 新建</button>
+            <div class="navbar-actions">
+                <button class="navbar-btn export-btn" id="btnExport">📤 导出</button>
+                <button class="navbar-btn import-btn" id="btnImport">📥 导入</button>
+                <button class="navbar-btn" id="btn-new-cat">+ 新建</button>
+            </div>
         </div>
         <div class="main-content" id="home-list"></div>
         <div class="bottom-bar" id="home-input" style="display:none;">
@@ -313,7 +318,7 @@
         </div>
     </div>
 
-    <!-- ===== 详情页（记录列表） ===== -->
+    <!-- ===== 详情页 ===== -->
     <div id="page-detail" class="page">
         <div class="navbar">
             <button class="navbar-back" id="btn-back">‹ 返回</button>
@@ -333,7 +338,6 @@
         (function() {
             'use strict';
 
-            // ===== 数据 =====
             var STORAGE_KEY = 'my_notebook_data';
             var data = { categories: [] };
             var currentCatId = null;
@@ -351,24 +355,10 @@
                         }
                     }
                 } catch(e) {}
-                // 默认示例
                 data = {
                     categories: [
-                        {
-                            id: 'demo_1',
-                            name: '📝 工作笔记',
-                            records: [
-                                { id: 'r1', text: '周一例会：讨论Q3项目进度', time: getTimeStr() },
-                                { id: 'r2', text: '完成需求文档初稿', time: getTimeStr() }
-                            ]
-                        },
-                        {
-                            id: 'demo_2',
-                            name: '💡 灵感碎片',
-                            records: [
-                                { id: 'r3', text: '做一个简洁的记录工具，分类+文本', time: getTimeStr() }
-                            ]
-                        }
+                        { id: 'demo_1', name: '📝 工作笔记', records: [{ id: 'r1', text: '周一例会：讨论Q3项目进度', time: getTimeStr() }, { id: 'r2', text: '完成需求文档初稿', time: getTimeStr() }] },
+                        { id: 'demo_2', name: '💡 灵感碎片', records: [{ id: 'r3', text: '做一个简洁的记录工具，分类+文本', time: getTimeStr() }] }
                     ]
                 };
                 saveData();
@@ -391,7 +381,6 @@
                 return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             }
 
-            // ===== Toast =====
             function showToast(msg) {
                 var el = document.getElementById('toast');
                 if (!el) return;
@@ -412,7 +401,6 @@
             var homeInput = document.getElementById('home-input');
             var catInput = document.getElementById('cat-input');
 
-            // ===== 工具 =====
             function findCategory(id) {
                 for (var i = 0; i < data.categories.length; i++) {
                     if (data.categories[i].id === id) return data.categories[i];
@@ -425,7 +413,7 @@
                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
-            // ===== 渲染首页 =====
+            // ===== 渲染 =====
             function renderHome() {
                 var cats = data.categories || [];
                 if (cats.length === 0) {
@@ -446,15 +434,12 @@
                 html += '</div>';
                 homeList.innerHTML = html;
 
-                // 点击分类 → 进入详情
                 homeList.querySelectorAll('.category-item').forEach(function(el) {
                     el.addEventListener('click', function(e) {
                         if (e.target.closest('.category-del')) return;
                         enterDetail(this.dataset.id);
                     });
                 });
-
-                // 删除分类
                 homeList.querySelectorAll('.category-del').forEach(function(btn) {
                     btn.addEventListener('click', function(e) {
                         e.stopPropagation();
@@ -465,13 +450,9 @@
                 });
             }
 
-            // ===== 渲染详情 =====
             function renderDetail(catId) {
                 var cat = findCategory(catId);
-                if (!cat) {
-                    goHome();
-                    return;
-                }
+                if (!cat) { goHome(); return; }
                 detailTitle.textContent = cat.name;
                 var records = cat.records || [];
                 if (records.length === 0) {
@@ -479,7 +460,6 @@
                     return;
                 }
                 var html = '<div class="record-list">';
-                // 倒序显示（最新的在上面）
                 for (var i = records.length - 1; i >= 0; i--) {
                     var r = records[i];
                     html += '<div class="record-item">';
@@ -490,7 +470,6 @@
                 }
                 html += '</div>';
                 detailList.innerHTML = html;
-
                 detailList.querySelectorAll('.record-del').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         if (confirm('删除这条记录？')) {
@@ -517,7 +496,6 @@
                 pageDetail.classList.add('active');
                 document.getElementById('btn-back').classList.add('show');
                 renderDetail(catId);
-                // 聚焦输入框
                 setTimeout(function() {
                     document.getElementById('record-input').focus();
                 }, 350);
@@ -526,22 +504,11 @@
             // ===== 数据操作 =====
             function addCategory(name) {
                 var trimmed = name.trim();
-                if (!trimmed) {
-                    showToast('请输入分类名称');
-                    return;
-                }
-                // 重名检查
+                if (!trimmed) { showToast('请输入分类名称'); return; }
                 for (var i = 0; i < data.categories.length; i++) {
-                    if (data.categories[i].name === trimmed) {
-                        showToast('分类已存在');
-                        return;
-                    }
+                    if (data.categories[i].name === trimmed) { showToast('分类已存在'); return; }
                 }
-                data.categories.push({
-                    id: genId(),
-                    name: trimmed,
-                    records: []
-                });
+                data.categories.push({ id: genId(), name: trimmed, records: [] });
                 saveData();
                 renderHome();
                 showToast('✅ 已创建');
@@ -552,36 +519,21 @@
             function deleteCategory(catId) {
                 var newCats = [];
                 for (var i = 0; i < data.categories.length; i++) {
-                    if (data.categories[i].id !== catId) {
-                        newCats.push(data.categories[i]);
-                    }
+                    if (data.categories[i].id !== catId) newCats.push(data.categories[i]);
                 }
                 data.categories = newCats;
                 saveData();
-                if (currentCatId === catId) {
-                    goHome();
-                } else {
-                    renderHome();
-                }
+                if (currentCatId === catId) goHome();
+                else renderHome();
                 showToast('已删除');
             }
 
             function addRecord(catId, text) {
                 var trimmed = text.trim();
-                if (!trimmed) {
-                    showToast('请输入内容');
-                    return;
-                }
+                if (!trimmed) { showToast('请输入内容'); return; }
                 var cat = findCategory(catId);
-                if (!cat) {
-                    showToast('分类不存在');
-                    return;
-                }
-                cat.records.push({
-                    id: genId(),
-                    text: trimmed,
-                    time: getTimeStr()
-                });
+                if (!cat) { showToast('分类不存在'); return; }
+                cat.records.push({ id: genId(), text: trimmed, time: getTimeStr() });
                 saveData();
                 renderDetail(catId);
                 document.getElementById('record-input').value = '';
@@ -595,9 +547,7 @@
                 if (!cat) return;
                 var newRecs = [];
                 for (var i = 0; i < cat.records.length; i++) {
-                    if (cat.records[i].id !== recId) {
-                        newRecs.push(cat.records[i]);
-                    }
+                    if (cat.records[i].id !== recId) newRecs.push(cat.records[i]);
                 }
                 cat.records = newRecs;
                 saveData();
@@ -605,36 +555,75 @@
                 showToast('已删除');
             }
 
-            // ===== 事件绑定 =====
+            // ===== 导入/导出 =====
+            function exportData() {
+                try {
+                    var jsonStr = JSON.stringify(data, null, 2);
+                    var blob = new Blob([jsonStr], { type: 'application/json' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = '我的记录本_备份_' + getTimeStr().replace(/[: ]/g, '_') + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('✅ 导出成功');
+                } catch(e) {
+                    showToast('❌ 导出失败');
+                }
+            }
 
-            // 返回
+            function importData(file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        var imported = JSON.parse(e.target.result);
+                        if (imported && typeof imported === 'object' && Array.isArray(imported.categories)) {
+                            if (confirm('导入将覆盖当前所有数据，确认继续？')) {
+                                data = imported;
+                                saveData();
+                                renderHome();
+                                if (currentCatId) {
+                                    currentCatId = null;
+                                    pageHome.classList.add('active');
+                                    pageDetail.classList.remove('active');
+                                    document.getElementById('btn-back').classList.remove('show');
+                                }
+                                showToast('✅ 导入成功！共 ' + data.categories.length + ' 个分类');
+                            }
+                        } else {
+                            showToast('❌ 文件格式无效');
+                        }
+                    } catch(err) {
+                        showToast('❌ 文件解析失败');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // ===== 事件绑定 =====
             document.getElementById('btn-back').addEventListener('click', goHome);
 
-            // 新建分类（显示输入框）
             document.getElementById('btn-new-cat').addEventListener('click', function() {
                 if (homeInput.style.display === 'flex') {
                     homeInput.style.display = 'none';
                     catInput.value = '';
                 } else {
                     homeInput.style.display = 'flex';
-                    setTimeout(function() {
-                        catInput.focus();
-                    }, 100);
+                    setTimeout(function() { catInput.focus(); }, 100);
                 }
             });
 
-            // 确认创建分类
             document.getElementById('btn-save-cat').addEventListener('click', function() {
                 addCategory(catInput.value);
             });
 
-            // 取消创建
             document.getElementById('btn-cancel-cat').addEventListener('click', function() {
                 homeInput.style.display = 'none';
                 catInput.value = '';
             });
 
-            // 分类输入框回车
             catInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -642,7 +631,6 @@
                 }
             });
 
-            // 删除分类（详情页）
             document.getElementById('btn-del-cat').addEventListener('click', function() {
                 if (!currentCatId) return;
                 if (confirm('确定删除这个分类吗？（其中的记录也会被删除）')) {
@@ -650,16 +638,11 @@
                 }
             });
 
-            // 添加记录
             document.getElementById('btn-add-record').addEventListener('click', function() {
-                if (!currentCatId) {
-                    showToast('请先选择分类');
-                    return;
-                }
+                if (!currentCatId) { showToast('请先选择分类'); return; }
                 addRecord(currentCatId, document.getElementById('record-input').value);
             });
 
-            // 记录输入框回车（Shift+Enter 换行）
             var recordInput = document.getElementById('record-input');
             recordInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -667,14 +650,26 @@
                     document.getElementById('btn-add-record').click();
                 }
             });
-
-            // 自动调整输入框高度
             recordInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // 点击空白区域关闭输入框（首页）
+            // 导出
+            document.getElementById('btnExport').addEventListener('click', exportData);
+
+            // 导入：触发文件选择
+            document.getElementById('btnImport').addEventListener('click', function() {
+                document.getElementById('fileInput').click();
+            });
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                if (this.files && this.files.length > 0) {
+                    importData(this.files[0]);
+                }
+                this.value = '';
+            });
+
+            // 点击空白关闭输入框
             document.addEventListener('touchstart', function(e) {
                 var target = e.target;
                 if (homeInput.style.display === 'flex') {
@@ -688,10 +683,7 @@
             // ===== 启动 =====
             loadData();
             renderHome();
-            if (data.categories.length > 0) {
-                showToast('📒 点击分类进入');
-            }
-
+            showToast('📒 点击分类进入 | 右上角可导入/导出');
         })();
     </script>
 </body>
