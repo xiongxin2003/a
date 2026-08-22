@@ -117,7 +117,6 @@
             overscroll-behavior: contain;
             padding: 16px 16px 20px;
             min-height: 0;
-            /* 关键：确保 flex 子项可以收缩 */
         }
 
         /* 底部留白，保证弹性滑动 */
@@ -655,7 +654,6 @@
                 homeInput.classList.remove('show');
                 catInput.value = '';
                 renderHome();
-                // 重置滚动到顶部
                 homeScroll.scrollTop = 0;
             }
 
@@ -665,11 +663,10 @@
                 pageDetail.classList.add('active');
                 document.getElementById('btn-back').classList.add('show');
                 renderDetail(catId);
-                // 重置滚动到顶部
                 detailScroll.scrollTop = 0;
                 setTimeout(function() {
                     document.getElementById('record-input').focus();
-                }, 350);
+                }, 400);
             }
 
             // ===== 数据操作 =====
@@ -829,8 +826,10 @@
             // ===== 事件绑定 =====
             document.getElementById('btn-back').addEventListener('click', goHome);
 
+            // 新建分类
             document.getElementById('btn-new-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
                     setTimeout(function() {
@@ -843,11 +842,13 @@
 
             document.getElementById('btn-save-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();
                 addCategory(catInput.value);
             });
 
             document.getElementById('btn-cancel-cat').addEventListener('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();
                 homeInput.classList.remove('show');
                 catInput.value = '';
             });
@@ -859,30 +860,51 @@
                 }
             });
 
-            document.getElementById('btn-del-cat').addEventListener('click', function() {
+            document.getElementById('btn-del-cat').addEventListener('click', function(e) {
+                e.preventDefault();
                 if (!currentCatId) return;
                 if (confirm('确定删除这个分类吗？（其中的记录也会被删除）')) {
                     deleteCategory(currentCatId);
                 }
             });
 
-            document.getElementById('btn-add-record').addEventListener('click', function() {
+            // ===== 详情页添加记录（关键修复） =====
+            var addRecordBtn = document.getElementById('btn-add-record');
+            var recordInputEl = document.getElementById('record-input');
+
+            addRecordBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
                 if (!currentCatId) { showToast('请先选择分类'); return; }
-                addRecord(currentCatId, document.getElementById('record-input').value);
+                addRecord(currentCatId, recordInputEl.value);
             });
 
-            var recordInput = document.getElementById('record-input');
-            recordInput.addEventListener('keydown', function(e) {
+            recordInputEl.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    document.getElementById('btn-add-record').click();
+                    addRecordBtn.click();
                 }
             });
-            recordInput.addEventListener('input', function() {
+
+            recordInputEl.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
+            // 点击输入框时阻止滚动容器干扰
+            recordInputEl.addEventListener('focus', function(e) {
+                e.stopPropagation();
+                // 延迟确保键盘弹出后，滚动到合适位置
+                setTimeout(function() {
+                    var rect = recordInputEl.getBoundingClientRect();
+                    var viewHeight = window.innerHeight;
+                    if (rect.top + rect.height > viewHeight - 200) {
+                        recordInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            });
+
+            // ===== 导出/导入 =====
             document.getElementById('btnExport').addEventListener('click', function(e) {
                 e.preventDefault();
                 showExportModal();
@@ -902,7 +924,7 @@
                 this.value = '';
             });
 
-            // ===== 点击页面空白关闭输入框（首页） =====
+            // ===== 点击空白关闭输入框 =====
             document.addEventListener('click', function(e) {
                 var target = e.target;
                 if (homeInput.classList.contains('show')) {
@@ -913,23 +935,6 @@
                         catInput.value = '';
                     }
                 }
-            });
-
-            // ===== 键盘弹出时保持布局 =====
-            // iOS 上输入框聚焦时，滚动到可见区域
-            var activeInputs = [catInput, recordInput];
-            activeInputs.forEach(function(input) {
-                if (!input) return;
-                input.addEventListener('focus', function() {
-                    // 延迟执行，等待键盘弹出
-                    setTimeout(function() {
-                        if (input === catInput && homeInput.classList.contains('show')) {
-                            homeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        } else if (input === recordInput) {
-                            // 详情页的输入框在底部，不需要额外滚动
-                        }
-                    }, 300);
-                });
             });
 
             // ===== 启动 =====
