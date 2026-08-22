@@ -12,22 +12,29 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* ===== 整体不滚动，由内部容器滚动 ===== */
+        html,
         body {
+            height: 100%;
+            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #f5f5f7;
             color: #1c1c1e;
-            /* 底部留白，给输入框腾空间 */
-            padding-bottom: 80px;
-            min-height: 100vh;
         }
 
-        /* ===== 页面切换 ===== */
+        /* ===== 页面 ===== */
         .page {
             display: none;
-            min-height: 100vh;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #f5f5f7;
         }
         .page.active {
-            display: block;
+            display: flex;
         }
 
         /* ===== 顶栏 ===== */
@@ -38,12 +45,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
+            flex-shrink: 0;
+            min-height: 52px;
             z-index: 20;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.92);
         }
         .navbar-title {
             font-size: 20px;
@@ -91,9 +95,14 @@
             cursor: pointer;
         }
 
-        /* ===== 内容区 ===== */
-        .content {
+        /* ===== 滚动内容区 ===== */
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 16px 16px 20px;
+            /* 底部留白，让内容不被输入框遮挡 */
+            padding-bottom: 90px;
         }
 
         /* ===== 分类卡片 ===== */
@@ -192,7 +201,7 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 底部输入栏（sticky 固定在底部） ===== */
+        /* ===== 底部输入栏（固定在页面底部，不随滚动移动） ===== */
         .bottom-bar {
             background: #fff;
             padding: 10px 16px 14px;
@@ -200,14 +209,13 @@
             display: flex;
             gap: 10px;
             align-items: flex-end;
-            position: sticky;
-            bottom: 0;
+            flex-shrink: 0;
+            /* 关键：固定在底部 */
+            position: relative;
             z-index: 30;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            /* 在页面滚动时固定底部 */
-            margin-top: -1px;
         }
         .bottom-bar input,
         .bottom-bar textarea {
@@ -271,7 +279,7 @@
         /* ===== Toast ===== */
         .toast {
             position: fixed;
-            bottom: 90px;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.78);
@@ -367,6 +375,7 @@
         @media (max-width: 480px) {
             .navbar {
                 padding: 10px 12px;
+                min-height: 46px;
             }
             .navbar-title {
                 font-size: 18px;
@@ -375,8 +384,9 @@
                 font-size: 12px;
                 padding: 4px 8px;
             }
-            .content {
+            .scroll-content {
                 padding: 12px 12px 16px;
+                padding-bottom: 80px;
             }
             .bottom-bar {
                 padding: 8px 12px 12px;
@@ -418,10 +428,9 @@
                 <button class="navbar-btn" id="btnNewCat">+ 新建</button>
             </div>
         </div>
-        <div class="content">
+        <div class="scroll-content" id="homeScroll">
             <div id="homeList"></div>
         </div>
-        <!-- 底部输入框 -->
         <div class="bottom-bar" id="homeInput">
             <div class="row">
                 <input type="text" id="catInput" placeholder="输入分类名称..." maxlength="20">
@@ -438,7 +447,7 @@
             <span class="navbar-title" id="detailTitle">分类</span>
             <button class="navbar-danger" id="btnDelCat">删除</button>
         </div>
-        <div class="content">
+        <div class="scroll-content" id="detailScroll">
             <div id="detailList"></div>
         </div>
         <div class="bottom-bar">
@@ -527,10 +536,13 @@
             var detailTitle = document.getElementById('detailTitle');
             var homeInput = document.getElementById('homeInput');
             var catInput = document.getElementById('catInput');
+            var homeScroll = document.getElementById('homeScroll');
+            var detailScroll = document.getElementById('detailScroll');
 
             // ===== 渲染首页 =====
             function renderHome() {
                 var cats = data.categories || [];
+                var scrollTop = homeScroll.scrollTop || 0;
                 if (cats.length === 0) {
                     homeList.innerHTML = '<div class="empty"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
                     return;
@@ -547,6 +559,7 @@
                     html += '</div></div>';
                 }
                 homeList.innerHTML = html;
+                homeScroll.scrollTop = scrollTop;
 
                 homeList.querySelectorAll('.cat-item').forEach(function(el) {
                     el.onclick = function(e) {
@@ -567,6 +580,7 @@
             // ===== 渲染详情 =====
             function renderDetail(id) {
                 var cat = findCat(id);
+                var scrollTop = detailScroll.scrollTop || 0;
                 if (!cat) { goHome(); return; }
                 detailTitle.textContent = cat.name;
                 var recs = cat.records || [];
@@ -584,6 +598,7 @@
                     html += '</div>';
                 }
                 detailList.innerHTML = html;
+                detailScroll.scrollTop = scrollTop;
 
                 detailList.querySelectorAll('.rec-del').forEach(function(btn) {
                     btn.onclick = function() {
@@ -603,7 +618,7 @@
                 homeInput.classList.remove('show');
                 catInput.value = '';
                 renderHome();
-                window.scrollTo(0, 0);
+                homeScroll.scrollTop = 0;
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -615,7 +630,7 @@
                 document.getElementById('pageDetail').classList.add('active');
                 document.getElementById('btnBack').classList.add('show');
                 renderDetail(id);
-                window.scrollTo(0, 0);
+                detailScroll.scrollTop = 0;
                 setTimeout(function() {
                     document.getElementById('recordInput').focus();
                 }, 300);
@@ -634,7 +649,6 @@
                 toast('✅ 已创建');
                 catInput.value = '';
                 homeInput.classList.remove('show');
-                window.scrollTo(0, 0);
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -667,9 +681,6 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
-                setTimeout(function() {
-                    window.scrollTo(0, 0);
-                }, 100);
             }
 
             function delRecord(catId, recId) {
@@ -772,7 +783,6 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
-                window.scrollTo(0, 0);
             };
 
             catInput.onkeydown = function(e) {
