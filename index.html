@@ -611,7 +611,6 @@
                 catInput.value = '';
                 renderHome();
                 window.scrollTo(0, 0);
-                // 收起键盘
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -627,14 +626,13 @@
                 setTimeout(function() {
                     var input = document.getElementById('recordInput');
                     input.focus();
-                    // 聚焦后滚动到输入框位置
                     setTimeout(function() {
                         input.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }, 300);
                 }, 300);
             }
 
-            // ===== 数据操作（先收起键盘再执行） =====
+            // ===== 数据操作 =====
             function addCategory(name) {
                 var t = name.trim();
                 if (!t) { toast('请输入分类名称'); return; }
@@ -648,7 +646,6 @@
                 catInput.value = '';
                 homeInput.classList.remove('show');
                 window.scrollTo(0, 0);
-                // 收起键盘
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -678,7 +675,6 @@
                 input.value = '';
                 input.style.height = 'auto';
                 toast('✅ 已添加');
-                // 收起键盘
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -747,19 +743,22 @@
                 reader.readAsText(file);
             }
 
-            // ===== 键盘修复 =====
-            function fixKeyboardScroll() {
-                var inputs = document.querySelectorAll('input, textarea');
-                inputs.forEach(function(input) {
-                    input.addEventListener('blur', function() {
-                        setTimeout(function() {
-                            window.scrollTo(0, 0);
-                        }, 150);
-                    });
-                });
+            // ===== 键盘修复：强制滚动到输入框 =====
+            function focusAndScroll(input) {
+                if (!input) return;
+                // 先聚焦
+                input.focus();
+                // 延迟滚动，等待键盘弹出
+                setTimeout(function() {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 350);
+                // 再次延迟，确保键盘完全弹出后重新调整
+                setTimeout(function() {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 600);
             }
 
-            // ===== 安全获取输入值（不依赖焦点） =====
+            // ===== 获取输入值（不依赖焦点） =====
             function getCatInputValue() {
                 return document.getElementById('catInput').value;
             }
@@ -772,15 +771,12 @@
 
             document.getElementById('btnBack').onclick = goHome;
 
+            // ===== 新建分类（核心修复） =====
             document.getElementById('btnNewCat').onclick = function() {
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
-                    setTimeout(function() {
-                        catInput.focus();
-                        setTimeout(function() {
-                            catInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
-                    }, 200);
+                    // 聚焦并强制滚动到输入框
+                    focusAndScroll(catInput);
                 } else {
                     catInput.value = '';
                     if (document.activeElement) {
@@ -789,9 +785,8 @@
                 }
             };
 
-            // ===== 创建分类按钮（核心修复） =====
+            // ===== 创建分类 =====
             document.getElementById('btnSaveCat').onclick = function() {
-                // 直接读取输入框的值，不依赖焦点
                 var val = getCatInputValue();
                 addCategory(val);
             };
@@ -808,7 +803,6 @@
             catInput.onkeydown = function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    // 直接调用创建，不依赖焦点
                     var val = getCatInputValue();
                     addCategory(val);
                 }
@@ -821,7 +815,7 @@
                 }
             };
 
-            // ===== 添加记录按钮（核心修复） =====
+            // ===== 添加记录 =====
             var recordInput = document.getElementById('recordInput');
             var addBtn = document.getElementById('btnAddRecord');
 
@@ -845,9 +839,15 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             };
 
+            // 详情页输入框聚焦时也滚动到可视区域
+            recordInput.addEventListener('focus', function() {
+                setTimeout(function() {
+                    recordInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+
             document.getElementById('btnExport').onclick = function() {
                 document.getElementById('exportModal').classList.add('show');
-                // 收起键盘
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
@@ -898,8 +898,21 @@
                 }
             };
 
-            // ===== 启动键盘修复 =====
-            fixKeyboardScroll();
+            // ===== 键盘弹起/收起时重置滚动 =====
+            if (window.visualViewport) {
+                var viewport = window.visualViewport;
+                var lastHeight = viewport.height;
+                viewport.addEventListener('resize', function() {
+                    var currentHeight = viewport.height;
+                    // 键盘收起时（高度变大），重置滚动到顶部
+                    if (currentHeight > lastHeight + 30) {
+                        setTimeout(function() {
+                            window.scrollTo(0, 0);
+                        }, 100);
+                    }
+                    lastHeight = currentHeight;
+                });
+            }
 
             // ===== 启动 =====
             load();
