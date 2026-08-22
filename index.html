@@ -12,7 +12,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 整体页面滚动，不再固定高度 */
         html,
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -20,10 +19,8 @@
             color: #1c1c1e;
             min-height: 100vh;
             padding-bottom: 80px;
-            /* 给底部输入栏留空间 */
         }
 
-        /* ===== 页面 ===== */
         .page {
             display: none;
             flex-direction: column;
@@ -33,7 +30,7 @@
             display: flex;
         }
 
-        /* ===== 顶栏（固定在顶部） ===== */
+        /* ===== 顶栏 ===== */
         .navbar {
             background: #fff;
             padding: 12px 16px;
@@ -96,7 +93,7 @@
             cursor: pointer;
         }
 
-        /* ===== 内容区（正常流式布局） ===== */
+        /* ===== 内容区 ===== */
         .content {
             flex: 1;
             padding: 16px 16px 20px;
@@ -198,7 +195,7 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 底部输入栏（固定于底部） ===== */
+        /* ===== 底部输入栏 ===== */
         .bottom-bar {
             background: #fff;
             padding: 10px 16px 14px;
@@ -274,7 +271,6 @@
             display: flex;
         }
 
-        /* 详情页底部固定，所以内容底部留白 */
         .detail-content {
             padding-bottom: 80px;
         }
@@ -401,13 +397,6 @@
                 padding-right: 38px;
             }
         }
-
-        /* 键盘弹出时，底部栏跟随上移（iOS 自动处理） */
-        /* 但为了防止底部栏遮挡内容，输入框聚焦时滚动到可视区域 */
-        .bottom-bar input:focus,
-        .bottom-bar textarea:focus {
-            /* 不做特殊处理，让浏览器自然表现 */
-        }
     </style>
 </head>
 <body>
@@ -440,7 +429,6 @@
         <div class="content">
             <div id="homeList"></div>
         </div>
-        <!-- 底部输入栏固定在页面底部 -->
         <div class="bottom-bar" id="homeInput">
             <div class="row">
                 <input type="text" id="catInput" placeholder="输入分类名称..." maxlength="20">
@@ -623,6 +611,10 @@
                 catInput.value = '';
                 renderHome();
                 window.scrollTo(0, 0);
+                // 收起键盘
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
             }
 
             function enterDetail(id) {
@@ -633,11 +625,16 @@
                 renderDetail(id);
                 window.scrollTo(0, 0);
                 setTimeout(function() {
-                    document.getElementById('recordInput').focus();
+                    var input = document.getElementById('recordInput');
+                    input.focus();
+                    // 聚焦后滚动到输入框位置
+                    setTimeout(function() {
+                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
                 }, 300);
             }
 
-            // ===== 数据操作 =====
+            // ===== 数据操作（先收起键盘再执行） =====
             function addCategory(name) {
                 var t = name.trim();
                 if (!t) { toast('请输入分类名称'); return; }
@@ -651,6 +648,10 @@
                 catInput.value = '';
                 homeInput.classList.remove('show');
                 window.scrollTo(0, 0);
+                // 收起键盘
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
             }
 
             function delCategory(id) {
@@ -677,7 +678,10 @@
                 input.value = '';
                 input.style.height = 'auto';
                 toast('✅ 已添加');
-                // 滚动到顶部，避免键盘收起后页面卡在中间
+                // 收起键盘
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
                 setTimeout(function() {
                     window.scrollTo(0, 0);
                 }, 100);
@@ -745,7 +749,6 @@
 
             // ===== 键盘修复 =====
             function fixKeyboardScroll() {
-                // 监听输入框失焦，重置滚动到顶部
                 var inputs = document.querySelectorAll('input, textarea');
                 inputs.forEach(function(input) {
                     input.addEventListener('blur', function() {
@@ -754,6 +757,15 @@
                         }, 150);
                     });
                 });
+            }
+
+            // ===== 安全获取输入值（不依赖焦点） =====
+            function getCatInputValue() {
+                return document.getElementById('catInput').value;
+            }
+
+            function getRecordInputValue() {
+                return document.getElementById('recordInput').value;
             }
 
             // ===== 事件绑定 =====
@@ -765,25 +777,40 @@
                 if (homeInput.classList.contains('show')) {
                     setTimeout(function() {
                         catInput.focus();
+                        setTimeout(function() {
+                            catInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
                     }, 200);
                 } else {
                     catInput.value = '';
+                    if (document.activeElement) {
+                        document.activeElement.blur();
+                    }
                 }
             };
 
+            // ===== 创建分类按钮（核心修复） =====
             document.getElementById('btnSaveCat').onclick = function() {
-                addCategory(catInput.value);
+                // 直接读取输入框的值，不依赖焦点
+                var val = getCatInputValue();
+                addCategory(val);
             };
 
             document.getElementById('btnCancelCat').onclick = function() {
                 homeInput.classList.remove('show');
                 catInput.value = '';
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
+                window.scrollTo(0, 0);
             };
 
             catInput.onkeydown = function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    document.getElementById('btnSaveCat').click();
+                    // 直接调用创建，不依赖焦点
+                    var val = getCatInputValue();
+                    addCategory(val);
                 }
             };
 
@@ -794,18 +821,22 @@
                 }
             };
 
+            // ===== 添加记录按钮（核心修复） =====
             var recordInput = document.getElementById('recordInput');
             var addBtn = document.getElementById('btnAddRecord');
 
             addBtn.onclick = function() {
                 if (!currentId) { toast('请先选择分类'); return; }
-                addRecord(currentId, recordInput.value);
+                var val = getRecordInputValue();
+                addRecord(currentId, val);
             };
 
             recordInput.onkeydown = function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    addBtn.click();
+                    if (!currentId) { toast('请先选择分类'); return; }
+                    var val = getRecordInputValue();
+                    addRecord(currentId, val);
                 }
             };
 
@@ -816,12 +847,19 @@
 
             document.getElementById('btnExport').onclick = function() {
                 document.getElementById('exportModal').classList.add('show');
+                // 收起键盘
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
             };
 
             var fileInput = document.getElementById('fileInput');
             document.getElementById('btnImport').onclick = function() {
                 fileInput.value = '';
                 fileInput.click();
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
             };
             fileInput.onchange = function() {
                 if (this.files && this.files.length > 0) {
@@ -853,6 +891,9 @@
                     if (!e.target.closest('#homeInput') && !e.target.closest('#btnNewCat')) {
                         homeInput.classList.remove('show');
                         catInput.value = '';
+                        if (document.activeElement) {
+                            document.activeElement.blur();
+                        }
                     }
                 }
             };
