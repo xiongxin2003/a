@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的记录本</title>
     <style>
         * {
@@ -104,8 +106,9 @@
             -webkit-overflow-scrolling: touch;
             padding: 16px 16px 20px;
             padding-bottom: 90px;
-            /* 关键：确保滚动容器始终可滚动 */
             overscroll-behavior: contain;
+            /* 过渡动画，平滑调整高度 */
+            transition: height 0.15s ease;
         }
 
         /* ===== 分类卡片 ===== */
@@ -217,7 +220,6 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            /* 关键：确保输入栏在键盘弹出时跟随上移 */
             position: relative;
         }
         .bottom-bar input,
@@ -541,12 +543,38 @@
             var homeScroll = document.getElementById('homeScroll');
             var detailScroll = document.getElementById('detailScroll');
 
+            // ===== 键盘适配：动态调整滚动容器高度 =====
+            function adjustScrollHeight() {
+                var activePage = document.querySelector('.page.active');
+                if (!activePage) return;
+                var scrollEl = activePage.querySelector('.scroll-content');
+                var bottomBar = activePage.querySelector('.bottom-bar');
+                if (!scrollEl || !bottomBar) return;
+
+                // 获取底部栏高度
+                var barHeight = bottomBar.offsetHeight || 70;
+                // 获取视口高度
+                var viewHeight = window.innerHeight;
+                // 获取顶栏高度
+                var navbar = activePage.querySelector('.navbar');
+                var navHeight = navbar ? navbar.offsetHeight : 52;
+
+                // 滚动容器高度 = 视口高度 - 顶栏高度 - 底部栏高度 - 安全边距
+                var scrollHeight = viewHeight - navHeight - barHeight - 4;
+                if (scrollHeight < 100) scrollHeight = 100;
+
+                scrollEl.style.height = scrollHeight + 'px';
+                scrollEl.style.minHeight = scrollHeight + 'px';
+                scrollEl.style.maxHeight = scrollHeight + 'px';
+            }
+
             // ===== 渲染首页 =====
             function renderHome() {
                 var cats = data.categories || [];
                 var scrollTop = homeScroll.scrollTop || 0;
                 if (cats.length === 0) {
                     homeList.innerHTML = '<div class="empty"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
+                    adjustScrollHeight();
                     return;
                 }
                 var html = '';
@@ -562,6 +590,7 @@
                 }
                 homeList.innerHTML = html;
                 homeScroll.scrollTop = scrollTop;
+                adjustScrollHeight();
 
                 homeList.querySelectorAll('.cat-item').forEach(function(el) {
                     el.onclick = function(e) {
@@ -588,6 +617,7 @@
                 var recs = cat.records || [];
                 if (recs.length === 0) {
                     detailList.innerHTML = '<div class="empty"><span class="icon">✍️</span>还没有记录<br>在底部输入框添加第一条</div>';
+                    adjustScrollHeight();
                     return;
                 }
                 var html = '';
@@ -601,6 +631,7 @@
                 }
                 detailList.innerHTML = html;
                 detailScroll.scrollTop = scrollTop;
+                adjustScrollHeight();
 
                 detailList.querySelectorAll('.rec-del').forEach(function(btn) {
                     btn.onclick = function() {
@@ -754,45 +785,6 @@
                 return document.getElementById('recordInput').value;
             }
 
-            // ===== 键盘修复：强制恢复滚动 =====
-            function fixScrollAfterKeyboard() {
-                var inputs = document.querySelectorAll('input, textarea');
-                inputs.forEach(function(input) {
-                    input.addEventListener('blur', function() {
-                        // 键盘收起后，强制恢复滚动容器的滚动能力
-                        setTimeout(function() {
-                            // 触发滚动容器的重排，恢复滚动
-                            if (homeScroll) {
-                                homeScroll.style.overflow = 'hidden';
-                                homeScroll.scrollTop = homeScroll.scrollTop || 0;
-                                setTimeout(function() {
-                                    homeScroll.style.overflow = 'auto';
-                                    homeScroll.style.overflowY = 'auto';
-                                    homeScroll.style.webkitOverflowScrolling = 'touch';
-                                }, 10);
-                            }
-                            if (detailScroll) {
-                                detailScroll.style.overflow = 'hidden';
-                                detailScroll.scrollTop = detailScroll.scrollTop || 0;
-                                setTimeout(function() {
-                                    detailScroll.style.overflow = 'auto';
-                                    detailScroll.style.overflowY = 'auto';
-                                    detailScroll.style.webkitOverflowScrolling = 'touch';
-                                }, 10);
-                            }
-                            // 重置 body 滚动
-                            document.body.style.overflow = 'hidden';
-                            document.body.style.position = 'fixed';
-                            // 恢复 body 滚动
-                            setTimeout(function() {
-                                document.body.style.overflow = 'hidden';
-                                document.body.style.position = 'fixed';
-                            }, 20);
-                        }, 100);
-                    });
-                });
-            }
-
             // ===== 事件绑定 =====
 
             document.getElementById('btnBack').onclick = goHome;
@@ -802,12 +794,15 @@
                 if (homeInput.classList.contains('show')) {
                     setTimeout(function() {
                         catInput.focus();
+                        // 聚焦后重新调整高度
+                        setTimeout(adjustScrollHeight, 400);
                     }, 300);
                 } else {
                     catInput.value = '';
                     if (document.activeElement) {
                         document.activeElement.blur();
                     }
+                    setTimeout(adjustScrollHeight, 300);
                 }
             };
 
@@ -822,6 +817,7 @@
                 if (document.activeElement) {
                     document.activeElement.blur();
                 }
+                setTimeout(adjustScrollHeight, 300);
             };
 
             catInput.onkeydown = function(e) {
@@ -861,6 +857,14 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             };
+
+            // 输入框聚焦/失焦时调整滚动高度
+            recordInput.addEventListener('focus', function() {
+                setTimeout(adjustScrollHeight, 400);
+            });
+            recordInput.addEventListener('blur', function() {
+                setTimeout(adjustScrollHeight, 300);
+            });
 
             document.getElementById('btnExport').onclick = function() {
                 document.getElementById('exportModal').classList.add('show');
@@ -910,16 +914,33 @@
                         if (document.activeElement) {
                             document.activeElement.blur();
                         }
+                        setTimeout(adjustScrollHeight, 300);
                     }
                 }
             };
 
-            // ===== 启动键盘修复 =====
-            fixScrollAfterKeyboard();
+            // ===== 监听窗口大小变化（键盘弹起/收起） =====
+            var resizeTimer = null;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    adjustScrollHeight();
+                    // 如果当前有输入框聚焦，滚动到顶部
+                    var activeEl = document.activeElement;
+                    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                        var scrollEl = activeEl.closest('.page')?.querySelector('.scroll-content');
+                        if (scrollEl) {
+                            scrollEl.scrollTop = 0;
+                        }
+                    }
+                }, 200);
+            });
 
             // ===== 启动 =====
             load();
             renderHome();
+            // 初始调整
+            setTimeout(adjustScrollHeight, 100);
             toast('📒 点击分类进入');
         })();
     </script>
