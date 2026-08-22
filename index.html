@@ -30,6 +30,7 @@
             flex-shrink: 0;
             flex-wrap: wrap;
             gap: 6px;
+            min-height: 52px;
         }
         .navbar-title {
             font-size: 20px;
@@ -109,6 +110,9 @@
             align-items: center;
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: background 0.15s;
+            -webkit-user-select: none;
+            user-select: none;
         }
         .category-item:active {
             background: #e8e8ed;
@@ -116,11 +120,13 @@
         .category-name {
             font-size: 17px;
             font-weight: 500;
+            word-break: break-word;
         }
         .category-meta {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0;
         }
         .category-count {
             font-size: 13px;
@@ -281,12 +287,103 @@
         #fileInput {
             display: none;
         }
+
+        /* ===== 导出选择弹窗 ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 28px 24px 24px;
+            max-width: 340px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: modalFadeIn 0.2s ease;
+        }
+        @keyframes modalFadeIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .modal-sub {
+            font-size: 14px;
+            color: #8e8e93;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .modal-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .modal-btn {
+            padding: 14px 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            text-align: center;
+            width: 100%;
+        }
+        .modal-btn:active {
+            opacity: 0.7;
+        }
+        .modal-btn-primary {
+            background: #007aff;
+            color: #ffffff;
+        }
+        .modal-btn-secondary {
+            background: #f2f2f7;
+            color: #1c1c1e;
+        }
+        .modal-btn-success {
+            background: #34c759;
+            color: #ffffff;
+        }
+        .modal-btn-cancel {
+            background: none;
+            color: #8e8e93;
+            font-size: 15px;
+            padding: 8px;
+            margin-top: 4px;
+        }
+        .modal-divider {
+            border: none;
+            border-top: 1px solid #e5e5ea;
+            margin: 6px 0 2px;
+        }
+
         @media (max-width: 480px) {
-            .navbar { padding: 10px 12px; }
+            .navbar { padding: 10px 12px; min-height: 46px; }
             .navbar-title { font-size: 18px; }
             .navbar-btn { font-size: 12px; padding: 4px 8px; }
             .main-content { padding: 12px 12px 8px; }
             .bottom-bar { padding: 8px 12px 12px; }
+            .category-item { padding: 12px 14px; }
+            .record-item { padding: 12px 14px; padding-right: 38px; }
+            .modal-box { padding: 24px 20px 20px; }
         }
     </style>
 </head>
@@ -294,6 +391,20 @@
 
     <div class="toast" id="toast"></div>
     <input type="file" id="fileInput" accept=".json">
+
+    <!-- ===== 导出选择弹窗 ===== -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal-box">
+            <div class="modal-title">📤 导出数据</div>
+            <div class="modal-sub">选择导出方式</div>
+            <div class="modal-btn-group">
+                <button class="modal-btn modal-btn-success" id="exportNewBtn">📄 新建存档</button>
+                <button class="modal-btn modal-btn-primary" id="exportOverwriteBtn">🔄 覆盖上次存档</button>
+                <hr class="modal-divider">
+                <button class="modal-btn modal-btn-cancel" id="exportCancelBtn">取消</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ===== 首页 ===== -->
     <div id="page-home" class="page active">
@@ -336,9 +447,11 @@
             'use strict';
 
             var STORAGE_KEY = 'my_notebook_data';
+            var LAST_EXPORT_KEY = 'my_notebook_last_export';
             var data = { categories: [] };
             var currentCatId = null;
             var toastTimer = null;
+            var scrollPositions = { home: 0, detail: 0 };
 
             // ===== 存储 =====
             function loadData() {
@@ -372,6 +485,13 @@
                 function pad(n) { return String(n).padStart(2, '0'); }
                 return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
                     ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            }
+
+            function getTimeStrCompact() {
+                var d = new Date();
+                function pad(n) { return String(n).padStart(2, '0'); }
+                return d.getFullYear() + '' + pad(d.getMonth() + 1) + '' + pad(d.getDate()) +
+                    '_' + pad(d.getHours()) + '' + pad(d.getMinutes());
             }
 
             function genId() {
@@ -413,8 +533,10 @@
             // ===== 渲染 =====
             function renderHome() {
                 var cats = data.categories || [];
+                var container = homeList;
+                scrollPositions.home = container.scrollTop || 0;
                 if (cats.length === 0) {
-                    homeList.innerHTML = '<div class="empty-state"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
+                    container.innerHTML = '<div class="empty-state"><span class="icon">📭</span>还没有分类<br>点击右上角「+ 新建」添加</div>';
                     return;
                 }
                 var html = '<div class="category-list">';
@@ -429,15 +551,17 @@
                     html += '</div></div>';
                 }
                 html += '</div>';
-                homeList.innerHTML = html;
-
-                homeList.querySelectorAll('.category-item').forEach(function(el) {
+                container.innerHTML = html;
+                requestAnimationFrame(function() {
+                    container.scrollTop = scrollPositions.home;
+                });
+                container.querySelectorAll('.category-item').forEach(function(el) {
                     el.addEventListener('click', function(e) {
                         if (e.target.closest('.category-del')) return;
                         enterDetail(this.dataset.id);
                     });
                 });
-                homeList.querySelectorAll('.category-del').forEach(function(btn) {
+                container.querySelectorAll('.category-del').forEach(function(btn) {
                     btn.addEventListener('click', function(e) {
                         e.stopPropagation();
                         if (confirm('删除这个分类吗？（其中的记录也会被删除）')) {
@@ -449,11 +573,13 @@
 
             function renderDetail(catId) {
                 var cat = findCategory(catId);
+                var container = detailList;
+                scrollPositions.detail = container.scrollTop || 0;
                 if (!cat) { goHome(); return; }
                 detailTitle.textContent = cat.name;
                 var records = cat.records || [];
                 if (records.length === 0) {
-                    detailList.innerHTML = '<div class="empty-state"><span class="icon">✍️</span>还没有记录<br>在底部输入框添加第一条</div>';
+                    container.innerHTML = '<div class="empty-state"><span class="icon">✍️</span>还没有记录<br>在底部输入框添加第一条</div>';
                     return;
                 }
                 var html = '<div class="record-list">';
@@ -466,8 +592,11 @@
                     html += '</div>';
                 }
                 html += '</div>';
-                detailList.innerHTML = html;
-                detailList.querySelectorAll('.record-del').forEach(function(btn) {
+                container.innerHTML = html;
+                requestAnimationFrame(function() {
+                    container.scrollTop = scrollPositions.detail;
+                });
+                container.querySelectorAll('.record-del').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         if (confirm('删除这条记录？')) {
                             deleteRecord(catId, this.dataset.id);
@@ -552,40 +681,81 @@
                 showToast('已删除');
             }
 
-            // ===== 导入/导出（修复版） =====
-            function exportData() {
+            // ===== 导入/导出 =====
+            function performExport(filename) {
                 try {
                     var jsonStr = JSON.stringify(data, null, 2);
-                    // 兼容 iOS 的处理方式
                     var blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
                     var url = URL.createObjectURL(blob);
-                    
-                    // 创建下载链接
                     var a = document.createElement('a');
                     a.href = url;
-                    a.download = '记录本备份_' + getTimeStr().replace(/[: ]/g, '_') + '.json';
+                    a.download = filename;
                     document.body.appendChild(a);
                     a.click();
-                    
-                    // 清理
                     setTimeout(function() {
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                     }, 1000);
-                    
-                    showToast('✅ 导出成功');
+                    // 记录上次导出的文件名
+                    try {
+                        localStorage.setItem(LAST_EXPORT_KEY, filename);
+                    } catch(e) {}
+                    showToast('✅ 导出成功: ' + filename);
                 } catch(e) {
                     console.error(e);
-                    showToast('❌ 导出失败，请重试');
+                    showToast('❌ 导出失败');
                 }
             }
 
+            function exportNew() {
+                var timeStr = getTimeStrCompact();
+                var filename = '记录本_备份_' + timeStr + '.json';
+                performExport(filename);
+                closeExportModal();
+            }
+
+            function exportOverwrite() {
+                var lastFilename = null;
+                try {
+                    lastFilename = localStorage.getItem(LAST_EXPORT_KEY);
+                } catch(e) {}
+                if (lastFilename) {
+                    performExport(lastFilename);
+                } else {
+                    // 如果没有上次存档记录，自动用新建模式
+                    exportNew();
+                }
+                closeExportModal();
+            }
+
+            // ===== 导出弹窗 =====
+            var exportModal = document.getElementById('exportModal');
+
+            function showExportModal() {
+                exportModal.classList.add('show');
+            }
+
+            function closeExportModal() {
+                exportModal.classList.remove('show');
+            }
+
+            // 点击背景关闭
+            exportModal.addEventListener('click', function(e) {
+                if (e.target === exportModal) {
+                    closeExportModal();
+                }
+            });
+
+            document.getElementById('exportNewBtn').addEventListener('click', exportNew);
+            document.getElementById('exportOverwriteBtn').addEventListener('click', exportOverwrite);
+            document.getElementById('exportCancelBtn').addEventListener('click', closeExportModal);
+
+            // ===== 导入 =====
             function importData(file) {
                 if (!file) {
                     showToast('请选择一个文件');
                     return;
                 }
-                
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     try {
@@ -594,7 +764,6 @@
                             if (confirm('导入将覆盖当前所有数据，确认继续？')) {
                                 data = imported;
                                 saveData();
-                                // 如果在详情页，返回首页
                                 if (pageDetail.classList.contains('active')) {
                                     goHome();
                                 } else {
@@ -603,11 +772,11 @@
                                 showToast('✅ 导入成功！共 ' + data.categories.length + ' 个分类');
                             }
                         } else {
-                            showToast('❌ 文件格式无效，请检查');
+                            showToast('❌ 文件格式无效');
                         }
                     } catch(err) {
                         console.error(err);
-                        showToast('❌ 文件解析失败，请确认是有效的JSON文件');
+                        showToast('❌ 文件解析失败');
                     }
                 };
                 reader.onerror = function() {
@@ -669,20 +838,16 @@
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
 
-            // ===== 导出按钮（强化） =====
-            var exportBtn = document.getElementById('btnExport');
-            exportBtn.addEventListener('click', function(e) {
+            // ===== 导出按钮 =====
+            document.getElementById('btnExport').addEventListener('click', function(e) {
                 e.preventDefault();
-                exportData();
+                showExportModal();
             });
 
-            // ===== 导入按钮（强化） =====
+            // ===== 导入按钮 =====
             var fileInput = document.getElementById('fileInput');
-            var importBtn = document.getElementById('btnImport');
-            
-            importBtn.addEventListener('click', function(e) {
+            document.getElementById('btnImport').addEventListener('click', function(e) {
                 e.preventDefault();
-                // 重置文件输入，确保每次点击都能触发
                 fileInput.value = '';
                 fileInput.click();
             });
@@ -691,11 +856,10 @@
                 if (this.files && this.files.length > 0) {
                     importData(this.files[0]);
                 }
-                // 重置，允许重复选择同一个文件
                 this.value = '';
             });
 
-            // 点击空白关闭输入框
+            // ===== 点击空白关闭输入框 =====
             document.addEventListener('touchstart', function(e) {
                 var target = e.target;
                 if (homeInput.style.display === 'flex') {
