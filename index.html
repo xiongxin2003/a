@@ -12,7 +12,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* ===== 整体不滚动，由内部容器滚动 ===== */
         html,
         body {
             height: 100%;
@@ -20,9 +19,12 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #f5f5f7;
             color: #1c1c1e;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
         }
 
-        /* ===== 页面 ===== */
         .page {
             display: none;
             flex-direction: column;
@@ -101,8 +103,9 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 16px 16px 20px;
-            /* 底部留白，让内容不被输入框遮挡 */
             padding-bottom: 90px;
+            /* 关键：确保滚动容器始终可滚动 */
+            overscroll-behavior: contain;
         }
 
         /* ===== 分类卡片 ===== */
@@ -201,7 +204,7 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 底部输入栏（固定在页面底部，不随滚动移动） ===== */
+        /* ===== 底部输入栏 ===== */
         .bottom-bar {
             background: #fff;
             padding: 10px 16px 14px;
@@ -210,12 +213,12 @@
             gap: 10px;
             align-items: flex-end;
             flex-shrink: 0;
-            /* 关键：固定在底部 */
-            position: relative;
             z-index: 30;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            /* 关键：确保输入栏在键盘弹出时跟随上移 */
+            position: relative;
         }
         .bottom-bar input,
         .bottom-bar textarea {
@@ -268,7 +271,6 @@
             width: 100%;
         }
 
-        /* ===== 首页输入框（默认隐藏） ===== */
         #homeInput {
             display: none;
         }
@@ -752,11 +754,49 @@
                 return document.getElementById('recordInput').value;
             }
 
+            // ===== 键盘修复：强制恢复滚动 =====
+            function fixScrollAfterKeyboard() {
+                var inputs = document.querySelectorAll('input, textarea');
+                inputs.forEach(function(input) {
+                    input.addEventListener('blur', function() {
+                        // 键盘收起后，强制恢复滚动容器的滚动能力
+                        setTimeout(function() {
+                            // 触发滚动容器的重排，恢复滚动
+                            if (homeScroll) {
+                                homeScroll.style.overflow = 'hidden';
+                                homeScroll.scrollTop = homeScroll.scrollTop || 0;
+                                setTimeout(function() {
+                                    homeScroll.style.overflow = 'auto';
+                                    homeScroll.style.overflowY = 'auto';
+                                    homeScroll.style.webkitOverflowScrolling = 'touch';
+                                }, 10);
+                            }
+                            if (detailScroll) {
+                                detailScroll.style.overflow = 'hidden';
+                                detailScroll.scrollTop = detailScroll.scrollTop || 0;
+                                setTimeout(function() {
+                                    detailScroll.style.overflow = 'auto';
+                                    detailScroll.style.overflowY = 'auto';
+                                    detailScroll.style.webkitOverflowScrolling = 'touch';
+                                }, 10);
+                            }
+                            // 重置 body 滚动
+                            document.body.style.overflow = 'hidden';
+                            document.body.style.position = 'fixed';
+                            // 恢复 body 滚动
+                            setTimeout(function() {
+                                document.body.style.overflow = 'hidden';
+                                document.body.style.position = 'fixed';
+                            }, 20);
+                        }, 100);
+                    });
+                });
+            }
+
             // ===== 事件绑定 =====
 
             document.getElementById('btnBack').onclick = goHome;
 
-            // ===== 新建分类 =====
             document.getElementById('btnNewCat').onclick = function() {
                 homeInput.classList.toggle('show');
                 if (homeInput.classList.contains('show')) {
@@ -771,7 +811,6 @@
                 }
             };
 
-            // ===== 创建分类 =====
             document.getElementById('btnSaveCat').onclick = function() {
                 var val = getCatInputValue();
                 addCategory(val);
@@ -800,7 +839,6 @@
                 }
             };
 
-            // ===== 添加记录 =====
             var recordInput = document.getElementById('recordInput');
             var addBtn = document.getElementById('btnAddRecord');
 
@@ -875,6 +913,9 @@
                     }
                 }
             };
+
+            // ===== 启动键盘修复 =====
+            fixScrollAfterKeyboard();
 
             // ===== 启动 =====
             load();
